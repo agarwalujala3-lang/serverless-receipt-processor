@@ -98,12 +98,18 @@ The following screenshots demonstrate the complete working of the system and val
 
 {
   **Receipt ID:** d67bee88 e951-4ac0af92-c1d783c62e5d
+
   **Vendor:** mellu Trading Pty Ltd
+
   **Date:** 12th Jan 2025
+
   **Total Amount:** $322 37
+
   **53 Location:** s3//receipt manager uploads/incoming/food Receipt.pdf
+
   **Items:**
   King Nachos $$22.00 x 1
+
   Hot Smoky Four Bean Mix $50.00 x 1
 }
 
@@ -111,13 +117,13 @@ The following screenshots demonstrate the complete working of the system and val
 
 Lambda execution role must have access to:
 
-- s3: GetObject
+- **s3:** GetObject
 
-- textract: DetectDocumentText
+- **textract:** DetectDocumentText
 
-- dynamodb: PutItem
+- **dynamodb:** PutItem
 
-- ses: SendEmail
+- **ses:** SendEmail
 
 ## Features
 
