@@ -14,6 +14,11 @@ This project automates receipt extraction and storage using cloud services.
 
 User → API Gateway → AWS Lambda → Textract → DynamoDB → S3
 
+## 🏗️ System Architecture
+
+![Architecture Diagram](screenshots/architecture.png)
+
+
 ## ⚙️ Tech Stack
 
 - **Backend:** Python
