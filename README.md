@@ -67,3 +67,16 @@ User → API Gateway → AWS Lambda → Textract → DynamoDB → S3
 - Stateless Lambda functions for horizontal scaling
 
 - DynamoDB for low-latency performance
+
+## 👩‍💻 Author
+
+Ujala Agarwal
+Frontend & Cloud Computing Enthusiast
+
+GitHub: https://github.com/agarwalujala3-lang 
+
+LinkedIn: https://linkedin.com/in/ujala-agarwal-30aa28283
+
+## ⭐ Support
+
+If you found this project helpful, consider giving it a ⭐ on GitHub!
