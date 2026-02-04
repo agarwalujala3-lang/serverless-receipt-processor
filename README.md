@@ -59,3 +59,11 @@ User → API Gateway → AWS Lambda → Textract → DynamoDB → S3
 - Multi-language OCR support
 
 - Expense categorization using ML
+
+## 📊 Scalability Considerations
+
+- Designed to handle high concurrent users using serverless architecture
+
+- Stateless Lambda functions for horizontal scaling
+
+- DynamoDB for low-latency performance
