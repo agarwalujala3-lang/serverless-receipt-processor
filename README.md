@@ -16,7 +16,7 @@ User → API Gateway → AWS Lambda → Textract → DynamoDB → S3
 
 ## 🏗️ System Architecture
 
-![Architecture Diagram](screenshots/architecture.png)
+![Architecture Diagram](screenshots/architecture-diagram.png)
 
 
 ## ⚙️ Tech Stack
