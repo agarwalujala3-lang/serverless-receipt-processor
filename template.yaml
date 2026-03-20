@@ -138,6 +138,12 @@ Resources:
             ApiId: !Ref ReceiptApi
             Method: GET
             Path: /receipts
+        SnapshotRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ReceiptApi
+            Method: GET
+            Path: /snapshot
         AnalyticsRoute:
           Type: HttpApi
           Properties:

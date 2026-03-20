@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 import boto3
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Key
 
 
 s3 = boto3.client("s3")
@@ -320,8 +320,9 @@ def determine_review_status(receipt_data):
 
 def find_duplicate_receipt(duplicate_key):
     table = dynamodb.Table(DYNAMODB_TABLE)
-    response = table.scan(
-        FilterExpression=Attr("duplicate_key").eq(duplicate_key),
+    response = table.query(
+        IndexName="DuplicateKeyIndex",
+        KeyConditionExpression=Key("duplicate_key").eq(duplicate_key),
         ProjectionExpression="receipt_id, duplicate_key, processed_timestamp, review_status",
         Limit=1,
     )

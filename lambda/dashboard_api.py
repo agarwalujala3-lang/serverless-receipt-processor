@@ -5,12 +5,15 @@ from collections import defaultdict
 from decimal import Decimal
 from datetime import datetime, timezone
 from io import StringIO
+import time
 
 import boto3
 
 
 dynamodb = boto3.resource("dynamodb")
 RECEIPT_TABLE = os.environ.get("DYNAMODB_TABLE", "ReceiptRecords")
+CACHE_TTL_SECONDS = int(os.environ.get("SNAPSHOT_CACHE_TTL_SECONDS", "15"))
+_SNAPSHOT_CACHE = {"expires_at": 0.0, "payload": None}
 
 
 def lambda_handler(event, context):
@@ -31,6 +34,7 @@ def lambda_handler(event, context):
                     "status": "ok",
                     "routes": [
                         "/health",
+                        "/snapshot",
                         "/receipts",
                         "/analytics",
                         "/exports/csv",
@@ -40,13 +44,18 @@ def lambda_handler(event, context):
         if method == "GET" and path == "/health":
             return response(200, {"status": "ok"})
         if method == "GET" and path == "/receipts":
-            receipts = filter_receipts(scan_receipts(), event.get("queryStringParameters") or {})
+            snapshot = get_snapshot_payload()
+            receipts = filter_receipts(
+                snapshot["receipts"], event.get("queryStringParameters") or {}
+            )
             return response(200, {"receipts": receipts})
         if method == "GET" and path == "/analytics":
-            analytics = build_analytics(scan_receipts())
+            analytics = get_snapshot_payload()["analytics"]
             return response(200, analytics)
+        if method == "GET" and path == "/snapshot":
+            return response(200, get_snapshot_payload())
         if method == "GET" and path == "/exports/csv":
-            csv_text = export_csv(scan_receipts())
+            csv_text = export_csv(get_snapshot_payload()["receipts"])
             return response(200, csv_text, content_type="text/csv")
         if method == "PATCH" and path.startswith("/receipts/") and path.endswith("/review"):
             receipt_id = path.split("/")[2]
@@ -71,6 +80,26 @@ def scan_receipts():
 
     items.sort(key=lambda item: item.get("processed_timestamp", ""), reverse=True)
     return items
+
+
+def get_snapshot_payload(force_refresh=False):
+    now = time.time()
+    if (
+        not force_refresh
+        and _SNAPSHOT_CACHE["payload"] is not None
+        and _SNAPSHOT_CACHE["expires_at"] > now
+    ):
+        return _SNAPSHOT_CACHE["payload"]
+
+    receipts = scan_receipts()
+    payload = {
+        "receipts": receipts,
+        "analytics": build_analytics(receipts),
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+    }
+    _SNAPSHOT_CACHE["payload"] = payload
+    _SNAPSHOT_CACHE["expires_at"] = now + CACHE_TTL_SECONDS
+    return payload
 
 
 def filter_receipts(receipts, query_params):
@@ -220,7 +249,13 @@ def update_review_status(receipt_id, payload):
         },
         ReturnValues="ALL_NEW",
     )
+    invalidate_snapshot_cache()
     return {"receipt": response.get("Attributes", {})}
+
+
+def invalidate_snapshot_cache():
+    _SNAPSHOT_CACHE["payload"] = None
+    _SNAPSHOT_CACHE["expires_at"] = 0.0
 
 
 def sort_breakdown(values, key_name="label"):
@@ -246,6 +281,9 @@ def parse_float(value):
 
 def response(status_code, payload, content_type="application/json"):
     body = payload if isinstance(payload, str) else json.dumps(normalize_payload(payload))
+    cache_control = "no-store"
+    if content_type == "application/json" and status_code == 200:
+        cache_control = "public, max-age=10, stale-while-revalidate=20"
     return {
         "statusCode": status_code,
         "headers": {
@@ -253,6 +291,7 @@ def response(status_code, payload, content_type="application/json"):
             "Access-Control-Allow-Headers": "Content-Type",
             "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
             "Content-Type": content_type,
+            "Cache-Control": cache_control,
         },
         "body": body,
     }

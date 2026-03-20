@@ -37,13 +37,9 @@ async function loadDashboard() {
       dashboardData = await demoPromise;
       renderDashboard();
 
-      const [analyticsResponse, receiptsResponse] = await Promise.all([
-        fetch(`${apiBase.replace(/\/$/, "")}/analytics`),
-        fetch(`${apiBase.replace(/\/$/, "")}/receipts`),
-      ]);
-      const analytics = await analyticsResponse.json();
-      const receiptsPayload = await receiptsResponse.json();
-      dashboardData = adaptApiPayload(analytics, receiptsPayload.receipts || []);
+      const snapshotResponse = await fetch(`${apiBase.replace(/\/$/, "")}/snapshot`);
+      const snapshotPayload = await snapshotResponse.json();
+      dashboardData = adaptSnapshotPayload(snapshotPayload);
       elements.modeBadge.textContent = "Live API";
       elements.statusNote.textContent = "Connected to live AWS receipt data.";
       renderDashboard();
@@ -121,6 +117,10 @@ function adaptApiPayload(analytics, receipts) {
     heroHeadline:
       "Low-confidence or duplicate receipts are surfaced before they become accounting noise.",
   };
+}
+
+function adaptSnapshotPayload(snapshot) {
+  return adaptApiPayload(snapshot.analytics || {}, snapshot.receipts || []);
 }
 
 function renderDashboard() {
