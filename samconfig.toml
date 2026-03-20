@@ -1,0 +1,26 @@
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "receiptpulse-prod"
+
+[default.build.parameters]
+cached = true
+parallel = true
+
+[default.validate.parameters]
+lint = false
+
+[default.deploy.parameters]
+capabilities = "CAPABILITY_IAM"
+confirm_changeset = true
+resolve_s3 = true
+region = "ap-south-1"
+s3_prefix = "receiptpulse"
+parameter_overrides = "SesSenderEmail=your-verified-sender@example.com SesDefaultRecipientEmail=finance@example.com ConfidenceThreshold=85"
+
+[default.sync.parameters]
+watch = true
+
+[default.local_start_api.parameters]
+warm_containers = "EAGER"

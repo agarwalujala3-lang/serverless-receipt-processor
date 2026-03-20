@@ -1,0 +1,17 @@
+version: 1
+frontend:
+  phases:
+    build:
+      commands:
+        - mkdir -p dist
+        - |
+          if [ -n "$API_BASE_URL" ]; then
+            printf 'window.RECEIPTPULSE_CONFIG = { apiBaseUrl: "%s" };\n' "$API_BASE_URL" > dashboard/config.js
+          fi
+        - cp -r dashboard/* dist/
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths: []

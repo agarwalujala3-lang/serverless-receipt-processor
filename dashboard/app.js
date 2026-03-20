@@ -18,7 +18,10 @@ let dashboardData = null;
 let activeFilter = "ALL";
 
 async function loadDashboard() {
-  const apiBase = new URLSearchParams(window.location.search).get("api");
+  const apiBase =
+    new URLSearchParams(window.location.search).get("api") ||
+    window.RECEIPTPULSE_CONFIG?.apiBaseUrl ||
+    "";
 
   if (apiBase) {
     try {
@@ -167,7 +170,7 @@ function renderCategoryChart() {
         <div class="chart-row">
           <div class="chart-meta">
             <strong>${item.label}</strong>
-            <span class="muted">$${Number(item.amount).toFixed(2)} · ${item.share}%</span>
+            <span class="muted">$${Number(item.amount).toFixed(2)} - ${item.share}%</span>
           </div>
           <div class="bar-track">
             <div class="bar-fill" style="width:${(item.amount / maxAmount) * 100}%"></div>
@@ -246,7 +249,7 @@ function renderTrend() {
         <div class="trend-bar">
           <div class="trend-meta">
             <strong>${item.month}</strong>
-            <span class="muted">$${Number(item.amount).toFixed(2)} · ${item.count} receipts</span>
+            <span class="muted">$${Number(item.amount).toFixed(2)} - ${item.count} receipts</span>
           </div>
           <div class="trend-track">
             <div class="trend-fill" style="width:${(item.amount / maxAmount) * 100}%"></div>

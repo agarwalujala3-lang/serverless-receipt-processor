@@ -1,60 +1,61 @@
 # ReceiptPulse
 
-ReceiptPulse is a **serverless receipt intelligence platform** built on AWS. It turns uploaded receipt files into structured expense records, flags risky submissions for review, detects possible duplicates, stores analytics-ready data in DynamoDB, and exposes a lightweight review API plus an eye-catching dashboard experience for demos and portfolio use.
+ReceiptPulse is a serverless receipt intelligence platform built on AWS. It turns uploaded receipts into structured expense records, flags risky submissions for review, detects duplicates, stores analytics-ready data in DynamoDB, exposes review and export APIs, and includes a polished dashboard for both portfolio demos and real operations.
 
-## Why This Version Feels Stronger
+## What Makes This Stronger
 
-The original project proved that S3, Lambda, Textract, DynamoDB, and SES could work together.
+The project now reads like a product instead of a single Lambda demo:
 
-This upgraded version pushes the idea further into a product-shaped system:
+- smart receipt enrichment with category, confidence, review status, and duplicate keys
+- review and analytics API for operations workflows
+- premium dashboard UI for technical and non-technical viewers
+- SAM template for backend deployment
+- Amplify build configuration for static frontend hosting
+- deployment docs for AWS launch
 
-- receipt categorization for richer expense insights
-- confidence-based review routing
-- duplicate detection before finance teams double-book receipts
-- uploader-aware notifications
-- analytics and export endpoints
-- a polished dashboard UI for non-technical and technical audiences
-- deployable infrastructure in a SAM template
+## Architecture
 
-## ⚙️ Tech Stack
-
-### Core Processing Pipeline
-
-1. A receipt lands in **Amazon S3**
-2. An S3 event triggers **AWS Lambda**
-3. Lambda uses **Amazon Textract AnalyzeExpense**
+1. A receipt is uploaded to Amazon S3
+2. S3 triggers a Lambda function
+3. Lambda calls Amazon Textract AnalyzeExpense
 4. The processor enriches the result with:
+   - vendor
+   - date
+   - total amount
+   - line items
    - category
-   - duplicate key
    - confidence score
+   - duplicate key
    - review status
-   - analytics fields
-5. The structured document is stored in **Amazon DynamoDB**
-6. **Amazon SES** sends a processing notification
-7. A separate API Lambda exposes receipts, analytics, CSV export, and review actions
+5. The enriched record is stored in DynamoDB
+6. SES sends a receipt processing notification
+7. A second Lambda exposes analytics, review, and export endpoints through HTTP API
+8. The static dashboard reads from the live API and renders a review console
 
-### Services Used
+## AWS Services Used
 
-- **Amazon S3** for receipt intake
-- **AWS Lambda** for event-driven processing and review APIs
-- **Amazon Textract** for receipt extraction
-- **Amazon DynamoDB** for enriched receipt storage
-- **Amazon SES** for notification emails
-- **Amazon API Gateway / HTTP API** for analytics and review access
-- **Amazon SQS** dead-letter queue for resiliency
-- **IAM** for scoped service permissions
+- Amazon S3
+- AWS Lambda
+- Amazon Textract
+- Amazon DynamoDB
+- Amazon SES
+- Amazon API Gateway HTTP API
+- Amazon SQS
+- IAM
+- AWS Amplify Hosting
 
-## What Is New
+## Features
 
 ### Receipt Intelligence
 
-- vendor, date, total, line items, and file metadata are stored together
-- category inference based on vendor and item keywords
-- confidence score derived from Textract field confidence
-- review routing when key fields are missing or confidence is low
-- duplicate detection using a hashed receipt signature
+- multi-record S3 event handling
+- vendor, date, amount, and line-item extraction
+- category inference from vendors and items
+- confidence-based review routing
+- duplicate detection using hashed receipt signatures
+- uploader-aware notifications
 
-### Operations Layer
+### API Layer
 
 - `GET /health`
 - `GET /receipts`
@@ -62,71 +63,85 @@ This upgraded version pushes the idea further into a product-shaped system:
 - `GET /exports/csv`
 - `PATCH /receipts/{receiptId}/review`
 
-### Dashboard Experience
+### Dashboard
 
-The `dashboard/` folder includes a premium static UI called **ReceiptPulse Console**.
+The dashboard in [dashboard](./dashboard) is designed to look strong for both recruiters and engineers.
 
-It is built to impress both:
+It includes:
 
-- **non-technical viewers**
-  - polished hero section
-  - category spend visuals
-  - review queue storytelling
-  - clean architecture flow
+- premium hero section
+- animated metric counters
+- category spend bars
+- vendor spend heatmap
+- review queue
+- monthly trend visualization
+- architecture storytelling panel
+- filterable receipt table
 
-- **technical reviewers**
-  - analytics-ready data model
-  - review-state logic
-  - API-driven structure
-  - deployable infrastructure definition
+By default it loads demo data. In live mode it reads the backend API from:
 
-The dashboard works with the included demo dataset by default and can be pointed at a live API using:
-
-```text
-dashboard/index.html?api=https://your-api-base-url
-```
+- the `?api=` query parameter, or
+- [dashboard/config.js](./dashboard/config.js), which can be generated automatically during Amplify deploys
 
 ## Repository Structure
 
 ```text
 .
-├── dashboard/
-│   ├── app.js
-│   ├── index.html
-│   ├── styles.css
-│   └── data/demo-dashboard.json
-├── events/
-│   ├── sample_review_event.json
-│   └── sample_s3_event.json
-├── lambda/
-│   ├── dashboard_api.py
-│   └── lambda_function.py
-├── sample-receipts/
-├── screenshots/
-├── template.yaml
-└── README.md
+|-- .github/workflows/validate.yml
+|-- amplify.yml
+|-- dashboard/
+|   |-- app.js
+|   |-- config.js
+|   |-- data/demo-dashboard.json
+|   |-- index.html
+|   `-- styles.css
+|-- docs/deployment.md
+|-- events/
+|   |-- sample_review_event.json
+|   `-- sample_s3_event.json
+|-- lambda/
+|   |-- dashboard_api.py
+|   `-- lambda_function.py
+|-- sample-receipts/
+|-- screenshots/
+|-- samconfig.toml
+`-- template.yaml
 ```
 
-## Lambda Highlights
+## Important Files
 
-### `lambda/lambda_function.py`
+### [lambda/lambda_function.py](./lambda/lambda_function.py)
 
-- processes one or many S3 event records
-- calls Textract `AnalyzeExpense`
+- processes S3 upload events
+- calls Textract AnalyzeExpense
 - normalizes dates and amounts
-- infers receipt category
-- calculates confidence score
-- flags low-confidence receipts for review
-- detects duplicates
-- writes enriched records to DynamoDB
-- sends SES updates to the uploader or fallback recipient
+- calculates confidence
+- infers categories
+- checks for duplicates
+- stores enriched records
+- sends SES notifications
 
-### `lambda/dashboard_api.py`
+### [lambda/dashboard_api.py](./lambda/dashboard_api.py)
 
-- lists receipt records
+- returns receipt lists
 - builds analytics summaries
 - exports CSV
-- supports manual review updates
+- updates review state
+
+### [template.yaml](./template.yaml)
+
+- provisions the backend with SAM
+- creates the bucket, DynamoDB table, DLQ, API, and Lambdas
+- accepts deploy-time parameters for SES sender, fallback recipient, and confidence threshold
+
+### [amplify.yml](./amplify.yml)
+
+- publishes the dashboard as a static site
+- injects the live backend API URL through the `API_BASE_URL` environment variable
+
+### [samconfig.toml](./samconfig.toml)
+
+- provides a practical default deployment profile for `ap-south-1`
 
 ## Example Enriched Receipt Record
 
@@ -143,66 +158,75 @@ dashboard/index.html?api=https://your-api-base-url
 }
 ```
 
-## Dashboard Preview Assets
+## Deploying It Live
 
-The original AWS validation screenshots are still included:
+This repo is ready for a two-part deployment:
 
-- [Architecture Diagram](./screenshots/architecture-diagram.png)
-- [S3 Upload](./screenshots/s3-bucket-items.png)
-- [CloudWatch Logs](./screenshots/cloudwatch-logs.png)
-- [DynamoDB Records](./screenshots/dynamodb-items.png)
-- [IAM Permissions](./screenshots/iam-role-permissions.png)
-- [SES Notification](./screenshots/ses-email-received.png)
+1. backend on AWS using SAM
+2. frontend on AWS Amplify Hosting
 
-## Deployment
+### Backend
 
-This repo now includes a **SAM template** in [template.yaml](./template.yaml).
-
-It provisions:
-
-- S3 bucket
-- DynamoDB table
-- dead-letter queue
-- receipt processor Lambda
-- dashboard API Lambda
-- HTTP API routes
-
-### Example Deploy Flow
+Update the email placeholders in [samconfig.toml](./samconfig.toml), then run:
 
 ```bash
 sam build
+sam deploy
+```
+
+If this is your first deploy and you want guided prompts:
+
+```bash
 sam deploy --guided
 ```
 
-## Local Validation
+### Frontend
 
-You can do a lightweight syntax check with:
+Connect the repo in Amplify and add this environment variable:
+
+```text
+API_BASE_URL=https://your-api-id.execute-api.ap-south-1.amazonaws.com
+```
+
+Amplify will publish the dashboard and inject the API URL into [dashboard/config.js](./dashboard/config.js) during the build.
+
+Detailed steps are in [docs/deployment.md](./docs/deployment.md).
+
+## SES Note
+
+For public live email delivery, your SES account must be out of sandbox mode in the same AWS Region where you deploy. Otherwise email sending will be limited to verified addresses.
+
+## Validation
+
+The repo includes:
+
+- sample events in [events](./events)
+- a GitHub Actions validation workflow in [.github/workflows/validate.yml](./.github/workflows/validate.yml)
+
+Lightweight local check:
 
 ```bash
 python -m py_compile lambda/*.py
+node --check dashboard/app.js
 ```
-
-The repo also includes sample event payloads in [events/](./events).
 
 ## Why It Works Well For Portfolio Use
 
-This project now tells a stronger story than a standard OCR automation demo:
-
-- it shows **event-driven AWS architecture**
-- it demonstrates **AI-assisted document extraction**
-- it includes **review logic and analytics**
-- it has a **UI layer that communicates product value clearly**
-- it feels closer to a real SaaS workflow than a one-function proof of concept
+- shows event-driven cloud design
+- demonstrates AI-assisted document extraction
+- includes review logic and analytics, not just OCR
+- has a strong visual layer for demos
+- is deployable as a real cloud project
 
 ## Future Extensions
 
-- approval workflow with Step Functions
-- Cognito-based user authentication
-- PDF report generation
+- Cognito authentication
+- Step Functions approval workflow
 - budget anomaly alerts
-- vendor-level spend forecasting
-- live dashboard deployment on S3 + CloudFront
+- vendor forecasting
+- PDF report generation
+- domain-based multi-tenant expense routing
 
 ## License
 
-This project is licensed under the **MIT License**.
+This project is licensed under the MIT License.

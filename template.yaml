@@ -2,6 +2,18 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: ReceiptPulse serverless receipt intelligence platform
 
+Parameters:
+  SesSenderEmail:
+    Type: String
+    Description: Verified SES sender identity used for outgoing receipt notifications.
+  SesDefaultRecipientEmail:
+    Type: String
+    Description: Fallback recipient when uploader metadata does not contain an email.
+  ConfidenceThreshold:
+    Type: Number
+    Default: 85
+    Description: Minimum extraction confidence before a receipt is routed to manual review.
+
 Globals:
   Function:
     Runtime: python3.12
@@ -10,9 +22,9 @@ Globals:
     Environment:
       Variables:
         DYNAMODB_TABLE: !Ref ReceiptTable
-        SES_SENDER_EMAIL: your-verified-sender@example.com
-        SES_RECIPIENT_EMAIL: finance@example.com
-        CONFIDENCE_THRESHOLD: "85"
+        SES_SENDER_EMAIL: !Ref SesSenderEmail
+        SES_RECIPIENT_EMAIL: !Ref SesDefaultRecipientEmail
+        CONFIDENCE_THRESHOLD: !Ref ConfidenceThreshold
 
 Resources:
   ReceiptBucket:
@@ -138,3 +150,5 @@ Outputs:
     Value: !Ref ReceiptTable
   ReceiptApiUrl:
     Value: !Sub "https://${ReceiptApi}.execute-api.${AWS::Region}.amazonaws.com"
+  DashboardApiHealthUrl:
+    Value: !Sub "https://${ReceiptApi}.execute-api.${AWS::Region}.amazonaws.com/health"
