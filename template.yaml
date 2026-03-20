@@ -120,6 +120,12 @@ Resources:
       CodeUri: lambda/
       Handler: dashboard_api.lambda_handler
       Events:
+        RootRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ReceiptApi
+            Method: GET
+            Path: /
         HealthRoute:
           Type: HttpApi
           Properties:

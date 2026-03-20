@@ -27,8 +27,16 @@ async function loadDashboard() {
     window.RECEIPTPULSE_CONFIG?.apiBaseUrl ||
     "";
 
+  const demoPromise = fetch(DATA_URL).then((response) => response.json());
+
   if (apiBase) {
+    elements.modeBadge.textContent = "Syncing";
+    elements.statusNote.textContent = "Loading dashboard instantly, then replacing it with live AWS data.";
+
     try {
+      dashboardData = await demoPromise;
+      renderDashboard();
+
       const [analyticsResponse, receiptsResponse] = await Promise.all([
         fetch(`${apiBase.replace(/\/$/, "")}/analytics`),
         fetch(`${apiBase.replace(/\/$/, "")}/receipts`),
@@ -42,15 +50,19 @@ async function loadDashboard() {
       return;
     } catch (error) {
       console.error("Live API mode failed, falling back to demo data.", error);
+      if (!dashboardData) {
+        dashboardData = await demoPromise;
+        renderDashboard();
+      }
+      elements.modeBadge.textContent = "Demo Dataset";
+      elements.statusNote.textContent = "Live API was slow or unavailable, so the dashboard stayed on demo data.";
+      return;
     }
   }
 
-  const response = await fetch(DATA_URL);
-  dashboardData = await response.json();
+  dashboardData = await demoPromise;
   elements.modeBadge.textContent = "Demo Dataset";
-  elements.statusNote.textContent = apiBase
-    ? "Live API was unavailable, showing the dashboard demo dataset."
-    : "Live API is not configured yet, showing the dashboard demo dataset.";
+  elements.statusNote.textContent = "Live API is not configured yet, showing the dashboard demo dataset.";
   renderDashboard();
 }
 
