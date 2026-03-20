@@ -51,7 +51,7 @@ DATE_FORMATS = (
 
 
 def lambda_handler(event, context):
-    records = event.get("Records", [])
+    records = extract_event_payloads(event)
     if not records:
         return response(400, {"message": "No S3 records found in event payload."})
 
@@ -64,10 +64,8 @@ def lambda_handler(event, context):
         except Exception as exc:
             failed.append(
                 {
-                    "bucket": record.get("s3", {}).get("bucket", {}).get("name"),
-                    "key": urllib.parse.unquote_plus(
-                        record.get("s3", {}).get("object", {}).get("key", "")
-                    ),
+                    "bucket": record.get("bucket"),
+                    "key": record.get("key"),
                     "error": str(exc),
                 }
             )
@@ -87,13 +85,10 @@ def lambda_handler(event, context):
 
 
 def process_record(record):
-    if record.get("eventSource") != "aws:s3":
-        raise ValueError("Unsupported event source. Expected an S3 trigger.")
-
-    bucket = record["s3"]["bucket"]["name"]
-    key = urllib.parse.unquote_plus(record["s3"]["object"]["key"])
-    object_size = record["s3"]["object"].get("size", 0)
-    etag = record["s3"]["object"].get("eTag", "")
+    bucket = record["bucket"]
+    key = record["key"]
+    object_size = record.get("size", 0)
+    etag = record.get("etag", "")
 
     print(f"Processing receipt from {bucket}/{key}")
     head = s3.head_object(Bucket=bucket, Key=key)
@@ -136,6 +131,39 @@ def process_record(record):
         "confidenceScore": receipt_data["confidence_score"],
         "duplicate": receipt_data["is_duplicate"],
     }
+
+
+def extract_event_payloads(event):
+    if event.get("Records"):
+        payloads = []
+        for record in event["Records"]:
+            if record.get("eventSource") != "aws:s3":
+                continue
+            payloads.append(
+                {
+                    "bucket": record["s3"]["bucket"]["name"],
+                    "key": urllib.parse.unquote_plus(record["s3"]["object"]["key"]),
+                    "size": record["s3"]["object"].get("size", 0),
+                    "etag": record["s3"]["object"].get("eTag", ""),
+                }
+            )
+        return payloads
+
+    detail = event.get("detail", {})
+    if event.get("source") == "aws.s3" and detail:
+        bucket = detail.get("bucket", {}).get("name")
+        key = urllib.parse.unquote_plus(detail.get("object", {}).get("key", ""))
+        if bucket and key:
+            return [
+                {
+                    "bucket": bucket,
+                    "key": key,
+                    "size": detail.get("object", {}).get("size", 0),
+                    "etag": detail.get("object", {}).get("etag", ""),
+                }
+            ]
+
+    return []
 
 
 def process_receipt_with_textract(bucket, key, object_size, etag, uploader_email):
@@ -218,21 +246,21 @@ def extract_summary_fields(expense_document, receipt_data):
             confidences.append(confidence)
             receipt_data["summary_fields"]["total"] = {
                 "value": value,
-                "confidence": confidence,
+                "confidence": f"{confidence:.2f}",
             }
         elif field_type == "INVOICE_RECEIPT_DATE" and value:
             receipt_data["date"] = value
             confidences.append(confidence)
             receipt_data["summary_fields"]["date"] = {
                 "value": value,
-                "confidence": confidence,
+                "confidence": f"{confidence:.2f}",
             }
         elif field_type == "VENDOR_NAME" and value:
             receipt_data["vendor"] = value
             confidences.append(confidence)
             receipt_data["summary_fields"]["vendor"] = {
                 "value": value,
-                "confidence": confidence,
+                "confidence": f"{confidence:.2f}",
             }
 
     average_confidence = sum(confidences) / len(confidences) if confidences else 0

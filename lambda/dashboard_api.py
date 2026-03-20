@@ -2,6 +2,7 @@ import csv
 import json
 import os
 from collections import defaultdict
+from decimal import Decimal
 from datetime import datetime, timezone
 from io import StringIO
 
@@ -230,7 +231,7 @@ def parse_float(value):
 
 
 def response(status_code, payload, content_type="application/json"):
-    body = payload if isinstance(payload, str) else json.dumps(payload)
+    body = payload if isinstance(payload, str) else json.dumps(normalize_payload(payload))
     return {
         "statusCode": status_code,
         "headers": {
@@ -241,3 +242,15 @@ def response(status_code, payload, content_type="application/json"):
         },
         "body": body,
     }
+
+
+def normalize_payload(value):
+    if isinstance(value, list):
+        return [normalize_payload(item) for item in value]
+    if isinstance(value, dict):
+        return {key: normalize_payload(item) for key, item in value.items()}
+    if isinstance(value, Decimal):
+        if value % 1 == 0:
+            return int(value)
+        return float(value)
+    return value
