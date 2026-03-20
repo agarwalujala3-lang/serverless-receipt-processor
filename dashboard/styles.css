@@ -76,24 +76,38 @@ body.cursor-active button {
 }
 
 .topbar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 2.5rem clamp(1.25rem, 4vw, 4rem) 1.25rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem 1.5rem;
+  padding: 1.4rem clamp(1.25rem, 4vw, 4rem) 0.65rem;
+}
+
+.topbar-copy {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .topbar h1 {
-  margin: 0.5rem 0 0;
-  max-width: 14ch;
+  margin: 0;
+  max-width: 16ch;
   font-family: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", sans-serif;
-  font-size: clamp(2.2rem, 6vw, 4.8rem);
-  line-height: 0.95;
+  font-size: clamp(1.8rem, 3.4vw, 2.95rem);
+  line-height: 1;
+}
+
+.topbar-text {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1.55;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.75rem;
   flex-wrap: wrap;
 }
@@ -142,7 +156,7 @@ body.cursor-active button {
 .shell {
   display: grid;
   gap: 1.25rem;
-  padding: 0  clamp(1.25rem, 4vw, 4rem) 3rem;
+  padding: 0 clamp(1.25rem, 4vw, 4rem) 3rem;
 }
 
 .panel {
@@ -680,6 +694,14 @@ body.cursor-hover .cursor-ring {
 }
 
 @media (max-width: 1180px) {
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
+  }
+
   .hero,
   .insight-layout,
   .metrics-grid,
@@ -690,8 +712,7 @@ body.cursor-hover .cursor-ring {
 
 @media (max-width: 760px) {
   .topbar {
-    align-items: flex-start;
-    flex-direction: column;
+    padding-top: 1.2rem;
   }
 
   .hero-copy h2 {
