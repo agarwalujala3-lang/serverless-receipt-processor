@@ -13,6 +13,24 @@ Parameters:
     Type: Number
     Default: 85
     Description: Minimum extraction confidence before a receipt is routed to manual review.
+  SnapshotCacheTtlSeconds:
+    Type: Number
+    Default: 45
+    Description: Warm cache TTL for dashboard snapshot responses.
+  SendEmailNotifications:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Enable SES notification delivery after receipt processing.
+  ReadObjectMetadata:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Read uploader metadata from the uploaded S3 object before processing.
 
 Globals:
   Function:
@@ -25,6 +43,9 @@ Globals:
         SES_SENDER_EMAIL: !Ref SesSenderEmail
         SES_RECIPIENT_EMAIL: !Ref SesDefaultRecipientEmail
         CONFIDENCE_THRESHOLD: !Ref ConfidenceThreshold
+        SNAPSHOT_CACHE_TTL_SECONDS: !Ref SnapshotCacheTtlSeconds
+        SEND_EMAIL_NOTIFICATIONS: !Ref SendEmailNotifications
+        READ_OBJECT_METADATA: !Ref ReadObjectMetadata
 
 Resources:
   ReceiptBucket:

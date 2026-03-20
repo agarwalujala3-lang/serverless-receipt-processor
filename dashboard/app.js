@@ -1,5 +1,218 @@
-const DATA_URL = "./data/demo-dashboard.json";
 const FILTERS = ["ALL", "AUTO_APPROVED", "NEEDS_REVIEW", "DUPLICATE"];
+const FALLBACK_DASHBOARD = {
+  summary: {
+    receiptCount: 18,
+    totalSpend: 4826.48,
+    averageConfidence: 91.4,
+    duplicateCount: 2,
+    needsReviewCount: 4,
+    autoApprovedCount: 14,
+  },
+  categoryBreakdown: [
+    { label: "Travel", amount: 1620.9, share: 33.6 },
+    { label: "Food & Dining", amount: 1182.44, share: 24.5 },
+    { label: "Retail", amount: 954.17, share: 19.8 },
+    { label: "Office Supplies", amount: 612.37, share: 12.7 },
+    { label: "Utilities", amount: 456.6, share: 9.4 },
+  ],
+  topVendors: [
+    { vendor: "Amazon", amount: 954.17, share: 19.8 },
+    { vendor: "SkyRoute Travels", amount: 842.6, share: 17.5 },
+    { vendor: "Mellu Trading Pty Ltd", amount: 694.12, share: 14.4 },
+    { vendor: "Urban Brew Cafe", amount: 512.41, share: 10.6 },
+  ],
+  monthlyTrend: [
+    { month: "2026-01", amount: 1186.25, count: 4 },
+    { month: "2026-02", amount: 1464.48, count: 5 },
+    { month: "2026-03", amount: 2175.75, count: 9 },
+  ],
+  reviewQueue: [
+    {
+      receiptId: "rcpt-104",
+      vendor: "Metro Medical",
+      category: "Medical",
+      totalAmount: "88.40",
+      reviewStatus: "NEEDS_REVIEW",
+      reasons: [
+        "Confidence score 78.30 is below threshold 85.00.",
+        "No line items were detected from the receipt.",
+      ],
+    },
+    {
+      receiptId: "rcpt-109",
+      vendor: "Amazon",
+      category: "Retail",
+      totalAmount: "241.99",
+      reviewStatus: "DUPLICATE",
+      reasons: ["Potential duplicate of rcpt-083."],
+    },
+    {
+      receiptId: "rcpt-114",
+      vendor: "Unknown Vendor",
+      category: "Uncategorized",
+      totalAmount: "0.00",
+      reviewStatus: "NEEDS_REVIEW",
+      reasons: [
+        "Vendor could not be identified confidently.",
+        "Total amount is missing or invalid.",
+      ],
+    },
+  ],
+  workflow: [
+    {
+      step: "01",
+      title: "Smart Intake",
+      description:
+        "Receipts are uploaded to Amazon S3 with uploader metadata for downstream ownership and alerts.",
+    },
+    {
+      step: "02",
+      title: "AI Extraction",
+      description: "Lambda uses Textract AnalyzeExpense to capture totals, vendor, date, and line items.",
+    },
+    {
+      step: "03",
+      title: "Quality Gates",
+      description:
+        "Confidence thresholds, duplicate keys, and missing-field checks assign auto-approve or review states.",
+    },
+    {
+      step: "04",
+      title: "Ops Storage",
+      description:
+        "DynamoDB stores analytics-ready receipt records for dashboards, export workflows, and review actions.",
+    },
+    {
+      step: "05",
+      title: "Action Layer",
+      description: "API endpoints and exports turn the pipeline into an operator-facing product surface.",
+    },
+  ],
+  heroHeadline:
+    "Low-confidence and duplicate receipts are intercepted before they distort finance reporting.",
+  receipts: [
+    {
+      receiptId: "rcpt-118",
+      vendor: "SkyRoute Travels",
+      category: "Travel",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "384.50",
+      confidenceScore: "96.2",
+      expenseMonth: "2026-03",
+      uploadedBy: "finance@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-117",
+      vendor: "Urban Brew Cafe",
+      category: "Food & Dining",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "63.20",
+      confidenceScore: "94.1",
+      expenseMonth: "2026-03",
+      uploadedBy: "ops@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-116",
+      vendor: "Amazon",
+      category: "Retail",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "241.99",
+      confidenceScore: "92.7",
+      expenseMonth: "2026-03",
+      uploadedBy: "procurement@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-115",
+      vendor: "OfficeVerse",
+      category: "Office Supplies",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "126.75",
+      confidenceScore: "90.3",
+      expenseMonth: "2026-03",
+      uploadedBy: "ops@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-114",
+      vendor: "Unknown Vendor",
+      category: "Uncategorized",
+      reviewStatus: "NEEDS_REVIEW",
+      totalAmount: "0.00",
+      confidenceScore: "71.1",
+      expenseMonth: "2026-03",
+      uploadedBy: "finance@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-113",
+      vendor: "Mellu Trading Pty Ltd",
+      category: "Retail",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "322.37",
+      confidenceScore: "93.9",
+      expenseMonth: "2026-03",
+      uploadedBy: "ops@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-112",
+      vendor: "Cloud Telecom",
+      category: "Utilities",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "178.80",
+      confidenceScore: "95.0",
+      expenseMonth: "2026-03",
+      uploadedBy: "infra@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-111",
+      vendor: "CityCab",
+      category: "Travel",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "58.45",
+      confidenceScore: "93.0",
+      expenseMonth: "2026-03",
+      uploadedBy: "ops@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-110",
+      vendor: "Metro Medical",
+      category: "Medical",
+      reviewStatus: "NEEDS_REVIEW",
+      totalAmount: "88.40",
+      confidenceScore: "78.3",
+      expenseMonth: "2026-03",
+      uploadedBy: "hr@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-109",
+      vendor: "Amazon",
+      category: "Retail",
+      reviewStatus: "DUPLICATE",
+      totalAmount: "241.99",
+      confidenceScore: "91.2",
+      expenseMonth: "2026-02",
+      uploadedBy: "procurement@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-108",
+      vendor: "Urban Brew Cafe",
+      category: "Food & Dining",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "49.60",
+      confidenceScore: "96.4",
+      expenseMonth: "2026-02",
+      uploadedBy: "marketing@receiptpulse.dev",
+    },
+    {
+      receiptId: "rcpt-107",
+      vendor: "SkyRoute Travels",
+      category: "Travel",
+      reviewStatus: "AUTO_APPROVED",
+      totalAmount: "399.65",
+      confidenceScore: "95.7",
+      expenseMonth: "2026-02",
+      uploadedBy: "finance@receiptpulse.dev",
+    },
+  ],
+};
 
 const elements = {
   cursorOrb: document.querySelector("#cursorOrb"),
@@ -21,23 +234,30 @@ let dashboardData = null;
 let activeFilter = "ALL";
 let revealObserver = null;
 
+function cloneDashboardState(source) {
+  return JSON.parse(JSON.stringify(source));
+}
+
 async function loadDashboard() {
   const apiBase =
     new URLSearchParams(window.location.search).get("api") ||
     window.RECEIPTPULSE_CONFIG?.apiBaseUrl ||
     "";
-
-  const demoPromise = fetch(DATA_URL).then((response) => response.json());
+  dashboardData = cloneDashboardState(FALLBACK_DASHBOARD);
+  renderDashboard();
 
   if (apiBase) {
     elements.modeBadge.textContent = "Syncing";
-    elements.statusNote.textContent = "Loading dashboard instantly, then replacing it with live AWS data.";
+    elements.statusNote.textContent =
+      "Console is ready. Pulling live AWS data in the background.";
 
     try {
-      dashboardData = await demoPromise;
-      renderDashboard();
-
-      const snapshotResponse = await fetch(`${apiBase.replace(/\/$/, "")}/snapshot`);
+      const snapshotResponse = await fetch(`${apiBase.replace(/\/$/, "")}/snapshot`, {
+        cache: "no-store",
+      });
+      if (!snapshotResponse.ok) {
+        throw new Error(`Snapshot request failed with status ${snapshotResponse.status}`);
+      }
       const snapshotPayload = await snapshotResponse.json();
       dashboardData = adaptSnapshotPayload(snapshotPayload);
       elements.modeBadge.textContent = "Live API";
@@ -46,20 +266,16 @@ async function loadDashboard() {
       return;
     } catch (error) {
       console.error("Live API mode failed, falling back to demo data.", error);
-      if (!dashboardData) {
-        dashboardData = await demoPromise;
-        renderDashboard();
-      }
-      elements.modeBadge.textContent = "Demo Dataset";
-      elements.statusNote.textContent = "Live API was slow or unavailable, so the dashboard stayed on demo data.";
+      elements.modeBadge.textContent = "Instant Preview";
+      elements.statusNote.textContent =
+        "Live API is warming up, so the console is staying on its built-in preview state.";
       return;
     }
   }
 
-  dashboardData = await demoPromise;
   elements.modeBadge.textContent = "Demo Dataset";
-  elements.statusNote.textContent = "Live API is not configured yet, showing the dashboard demo dataset.";
-  renderDashboard();
+  elements.statusNote.textContent =
+    "Live API is not configured yet, so the console is running from its built-in preview state.";
 }
 
 function adaptApiPayload(analytics, receipts) {

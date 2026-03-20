@@ -26,7 +26,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Manrope", sans-serif;
+  font-family: "Segoe UI", "Aptos", "Helvetica Neue", Arial, sans-serif;
   color: var(--text);
   background:
     radial-gradient(circle at top left, rgba(26, 109, 173, 0.35), transparent 30%),
@@ -49,7 +49,7 @@ body.cursor-active button {
 }
 
 .aurora {
-  filter: blur(70px);
+  filter: blur(48px);
   opacity: 0.45;
 }
 
@@ -86,7 +86,7 @@ body.cursor-active button {
 .topbar h1 {
   margin: 0.5rem 0 0;
   max-width: 14ch;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", sans-serif;
   font-size: clamp(2.2rem, 6vw, 4.8rem);
   line-height: 0.95;
 }
@@ -152,7 +152,7 @@ body.cursor-active button {
   border-radius: 28px;
   background: linear-gradient(180deg, rgba(12, 27, 48, 0.82), rgba(7, 17, 31, 0.9));
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(12px);
   transition:
     transform 220ms ease,
     border-color 220ms ease,
@@ -199,7 +199,7 @@ body.cursor-active button {
   inset: -20% auto -20% -10%;
   width: 40%;
   background: linear-gradient(180deg, rgba(152, 246, 255, 0), rgba(152, 246, 255, 0.18), rgba(152, 246, 255, 0));
-  filter: blur(18px);
+  filter: blur(12px);
   transform: rotate(12deg);
   animation: sweep 8s linear infinite;
   pointer-events: none;
@@ -208,7 +208,7 @@ body.cursor-active button {
 .hero-copy h2,
 .section-heading h3 {
   margin: 0;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", sans-serif;
 }
 
 .hero-copy h2 {
@@ -322,7 +322,7 @@ body.cursor-active button {
 .metric-card strong {
   display: block;
   margin-top: 0.9rem;
-  font-family: "Space Grotesk", sans-serif;
+  font-family: "Bahnschrift", "Segoe UI Variable Display", "Segoe UI", sans-serif;
   font-size: clamp(1.8rem, 2.5vw, 2.6rem);
 }
 

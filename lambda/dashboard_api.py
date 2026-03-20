@@ -71,11 +71,21 @@ def lambda_handler(event, context):
 def scan_receipts():
     table = dynamodb.Table(RECEIPT_TABLE)
     items = []
-    response = table.scan()
+    scan_args = {
+        "ProjectionExpression": (
+            "receipt_id, vendor, category, review_status, total_amount, "
+            "confidence_score, expense_month, uploaded_by, s3_path, "
+            "processed_timestamp, is_duplicate, review_reasons"
+        )
+    }
+    response = table.scan(**scan_args)
     items.extend(response.get("Items", []))
 
     while "LastEvaluatedKey" in response:
-        response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+        response = table.scan(
+            ExclusiveStartKey=response["LastEvaluatedKey"],
+            **scan_args,
+        )
         items.extend(response.get("Items", []))
 
     items.sort(key=lambda item: item.get("processed_timestamp", ""), reverse=True)

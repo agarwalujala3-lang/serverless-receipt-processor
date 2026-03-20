@@ -24,6 +24,12 @@ DEFAULT_RECIPIENT_EMAIL = os.environ.get(
 )
 CONFIDENCE_THRESHOLD = float(os.environ.get("CONFIDENCE_THRESHOLD", "85"))
 ALLOW_DUPLICATES = os.environ.get("ALLOW_DUPLICATES", "false").lower() == "true"
+SEND_EMAIL_NOTIFICATIONS = (
+    os.environ.get("SEND_EMAIL_NOTIFICATIONS", "false").lower() == "true"
+)
+READ_OBJECT_METADATA = (
+    os.environ.get("READ_OBJECT_METADATA", "false").lower() == "true"
+)
 
 CATEGORY_KEYWORDS = {
     "Travel": ("air", "flight", "uber", "ola", "rapido", "cab", "hotel", "booking"),
@@ -91,8 +97,13 @@ def process_record(record):
     etag = record.get("etag", "")
 
     print(f"Processing receipt from {bucket}/{key}")
-    head = s3.head_object(Bucket=bucket, Key=key)
-    metadata = head.get("Metadata", {})
+    metadata = {}
+    if READ_OBJECT_METADATA:
+        try:
+            head = s3.head_object(Bucket=bucket, Key=key)
+            metadata = head.get("Metadata", {})
+        except Exception as exc:
+            print(f"Unable to read S3 object metadata for {key}: {exc}")
     uploader_email = (
         metadata.get("uploader-email")
         or metadata.get("user-email")
@@ -120,7 +131,13 @@ def process_record(record):
             receipt_data["lifecycle_stage"] = "needs-attention"
 
     store_receipt_in_dynamodb(receipt_data)
-    send_email_notification(receipt_data)
+    if SEND_EMAIL_NOTIFICATIONS:
+        try:
+            send_email_notification(receipt_data)
+        except Exception as exc:
+            print(f"Email delivery failed for {receipt_data['receipt_id']}: {exc}")
+    else:
+        print("Email notifications are disabled for this stack.")
 
     return {
         "receiptId": receipt_data["receipt_id"],
