@@ -16,7 +16,7 @@ This upgraded version pushes the idea further into a product-shaped system:
 - a polished dashboard UI for non-technical and technical audiences
 - deployable infrastructure in a SAM template
 
-## Architecture
+## ⚙️ Tech Stack
 
 ### Core Processing Pipeline
 
