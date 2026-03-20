@@ -1,0 +1,17 @@
+{
+  "Records": [
+    {
+      "eventSource": "aws:s3",
+      "s3": {
+        "bucket": {
+          "name": "receiptpulse-uploads"
+        },
+        "object": {
+          "key": "incoming/food-receipt.pdf",
+          "size": 284612,
+          "eTag": "abc123exampleetag"
+        }
+      }
+    }
+  ]
+}

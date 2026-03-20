@@ -1,0 +1,9 @@
+{
+  "rawPath": "/receipts/rcpt-109/review",
+  "requestContext": {
+    "http": {
+      "method": "PATCH"
+    }
+  },
+  "body": "{\"reviewStatus\":\"APPROVED_AFTER_REVIEW\",\"reviewer\":\"finance-lead\",\"note\":\"Duplicate warning cleared after manual comparison.\"}"
+}

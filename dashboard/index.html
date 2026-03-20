@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReceiptPulse Console</title>
+    <meta
+      name="description"
+      content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="aurora aurora-one"></div>
+    <div class="aurora aurora-two"></div>
+    <div class="grid-sheen"></div>
+
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">ReceiptPulse Console</p>
+        <h1>Serverless expense intelligence with a product-grade surface.</h1>
+      </div>
+      <div class="topbar-actions">
+        <span class="status-pill" id="modeBadge">Demo Dataset</span>
+        <a class="ghost-link" href="../README.md">Architecture Notes</a>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="hero panel">
+        <div class="hero-copy">
+          <p class="eyebrow">From upload to finance-ready insight</p>
+          <h2>Turn raw receipt files into categorized, reviewable, exportable expense records.</h2>
+          <p class="hero-text">
+            ReceiptPulse combines S3, Lambda, Textract, DynamoDB, SES, and an API-driven review
+            layer to process receipts like a serious cloud product instead of a one-step demo.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#reviewQueue">Review Queue</a>
+            <a class="secondary-button" href="#receiptsTable">Explore Receipts</a>
+          </div>
+        </div>
+        <div class="hero-grid">
+          <article class="glass-card spotlight">
+            <span class="mini-label">Risk Gate</span>
+            <strong id="riskHeadline">Low-confidence receipts routed automatically.</strong>
+            <p>Confidence scoring, duplicate detection, and review status keep the pipeline trustworthy.</p>
+          </article>
+          <article class="glass-card">
+            <span class="mini-label">Cloud Flow</span>
+            <div class="pipeline">
+              <span>S3</span>
+              <span>Textract</span>
+              <span>DynamoDB</span>
+              <span>SES</span>
+              <span>API</span>
+            </div>
+          </article>
+          <article class="glass-card">
+            <span class="mini-label">Live Value</span>
+            <p>
+              A finance team gets searchable history, a review queue, category analytics, and export
+              access without managing servers.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="metrics-grid" id="metricsGrid"></section>
+
+      <section class="insight-layout">
+        <article class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Category Spend</p>
+              <h3>Where the money is going</h3>
+            </div>
+          </div>
+          <div id="categoryChart" class="stack-chart"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Vendor Heatmap</p>
+              <h3>Top vendors by processed value</h3>
+            </div>
+          </div>
+          <div id="vendorList" class="vendor-list"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">System Story</p>
+            <h3>Architecture that both recruiters and engineers can follow</h3>
+          </div>
+        </div>
+        <div class="architecture-track" id="workflowTrack"></div>
+      </section>
+
+      <section class="insight-layout">
+        <article class="panel" id="reviewQueue">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Review Queue</p>
+              <h3>Receipts that need human attention</h3>
+            </div>
+          </div>
+          <div id="queueList" class="queue-list"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Monthly Trend</p>
+              <h3>Processing throughput over time</h3>
+            </div>
+          </div>
+          <div id="trendBars" class="trend-bars"></div>
+        </article>
+      </section>
+
+      <section class="panel table-panel" id="receiptsTable">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Receipts</p>
+            <h3>Searchable receipt intelligence layer</h3>
+          </div>
+          <div class="filter-row" id="filterRow"></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Receipt</th>
+                <th>Vendor</th>
+                <th>Category</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Confidence</th>
+                <th>Month</th>
+              </tr>
+            </thead>
+            <tbody id="receiptsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

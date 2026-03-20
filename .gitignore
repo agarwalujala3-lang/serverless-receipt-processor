@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.aws-sam/
+.venv/
+.DS_Store
+Thumbs.db
