@@ -183,6 +183,11 @@ Resources:
             ApiId: !Ref ReceiptApi
             Method: PATCH
             Path: /receipts/{receiptId}/review
+        WarmSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Input: '{"warmer": true}'
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ReceiptTable

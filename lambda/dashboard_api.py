@@ -17,6 +17,10 @@ _SNAPSHOT_CACHE = {"expires_at": 0.0, "payload": None}
 
 
 def lambda_handler(event, context):
+    if event.get("warmer") or event.get("source") == "aws.events":
+        get_snapshot_payload(force_refresh=True)
+        return response(200, {"status": "warm"})
+
     method = (
         event.get("requestContext", {}).get("http", {}).get("method")
         or event.get("httpMethod", "GET")
