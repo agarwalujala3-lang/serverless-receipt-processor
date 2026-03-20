@@ -35,6 +35,12 @@ body {
   overflow-x: hidden;
 }
 
+body.cursor-active,
+body.cursor-active a,
+body.cursor-active button {
+  cursor: none;
+}
+
 .aurora,
 .grid-sheen {
   position: fixed;
@@ -96,6 +102,11 @@ body {
 .primary-button,
 .secondary-button {
   text-decoration: none;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
 .status-pill,
@@ -123,6 +134,11 @@ body {
   color: var(--muted);
 }
 
+.status-note {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .shell {
   display: grid;
   gap: 1.25rem;
@@ -137,6 +153,10 @@ body {
   background: linear-gradient(180deg, rgba(12, 27, 48, 0.82), rgba(7, 17, 31, 0.9));
   box-shadow: var(--shadow);
   backdrop-filter: blur(18px);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .panel::after {
@@ -147,11 +167,42 @@ body {
   pointer-events: none;
 }
 
+.panel::before,
+.glass-card::after,
+.vendor-row::after,
+.queue-item::after,
+.workflow-node::after,
+.metric-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(
+    240px circle at var(--glow-x, 50%) var(--glow-y, 50%),
+    rgba(110, 231, 247, 0.16),
+    transparent 58%
+  );
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1.35fr 1fr;
   gap: 1rem;
   padding: clamp(1.5rem, 3vw, 2rem);
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% -10%;
+  width: 40%;
+  background: linear-gradient(180deg, rgba(152, 246, 255, 0), rgba(152, 246, 255, 0.18), rgba(152, 246, 255, 0));
+  filter: blur(18px);
+  transform: rotate(12deg);
+  animation: sweep 8s linear infinite;
+  pointer-events: none;
 }
 
 .hero-copy h2,
@@ -207,10 +258,15 @@ body {
 }
 
 .glass-card {
+  position: relative;
   padding: 1.1rem;
   border-radius: 22px;
   border: 1px solid rgba(150, 194, 255, 0.14);
   background: linear-gradient(160deg, rgba(11, 31, 55, 0.92), rgba(6, 21, 37, 0.84));
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .spotlight {
@@ -336,10 +392,15 @@ body {
 }
 
 .vendor-row {
+  position: relative;
   padding: 1rem;
   border-radius: 22px;
   border: 1px solid rgba(122, 164, 213, 0.14);
   background: rgba(255, 255, 255, 0.03);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .vendor-share {
@@ -353,11 +414,16 @@ body {
 }
 
 .workflow-node {
+  position: relative;
   min-height: 220px;
   padding: 1.1rem;
   border-radius: 24px;
   border: 1px solid rgba(116, 167, 232, 0.16);
   background: linear-gradient(160deg, rgba(12, 27, 48, 0.92), rgba(4, 19, 33, 0.94));
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .workflow-step {
@@ -379,10 +445,15 @@ body {
 }
 
 .queue-item {
+  position: relative;
   padding: 1rem;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.03);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
 
 .reason-list {
@@ -403,6 +474,11 @@ body {
 
 .filter-chip {
   cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
 }
 
 .filter-chip.active {
@@ -468,6 +544,139 @@ tbody tr:hover {
 
 .muted {
   color: var(--muted);
+}
+
+.cursor-orb,
+.cursor-ring {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 30;
+  transition: opacity 180ms ease, transform 120ms ease;
+}
+
+.cursor-orb {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(152, 246, 255, 0.95), rgba(53, 217, 234, 0.72));
+  box-shadow:
+    0 0 22px rgba(53, 217, 234, 0.7),
+    0 0 42px rgba(53, 217, 234, 0.42);
+}
+
+.cursor-ring {
+  width: 42px;
+  height: 42px;
+  margin: -21px 0 0 -21px;
+  border-radius: 50%;
+  border: 1px solid rgba(152, 246, 255, 0.45);
+  box-shadow: 0 0 40px rgba(53, 217, 234, 0.18);
+}
+
+body.cursor-active .cursor-orb,
+body.cursor-active .cursor-ring {
+  opacity: 1;
+}
+
+body.cursor-hover .cursor-ring {
+  transform: scale(1.22);
+  border-color: rgba(152, 246, 255, 0.78);
+}
+
+.panel.is-visible,
+.glass-card.is-visible,
+.vendor-row.is-visible,
+.queue-item.is-visible,
+.workflow-node.is-visible,
+.metric-card.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.panel.reveal-ready,
+.glass-card.reveal-ready,
+.vendor-row.reveal-ready,
+.queue-item.reveal-ready,
+.workflow-node.reveal-ready,
+.metric-card.reveal-ready {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 420ms ease,
+    transform 420ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.panel.is-hovered,
+.glass-card.is-hovered,
+.vendor-row.is-hovered,
+.queue-item.is-hovered,
+.workflow-node.is-hovered,
+.metric-card.is-hovered,
+.primary-button:hover,
+.secondary-button:hover,
+.filter-chip:hover,
+.ghost-link:hover {
+  transform: translateY(-4px);
+  border-color: rgba(110, 231, 247, 0.34);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.34);
+}
+
+.panel.is-hovered::before,
+.glass-card.is-hovered::after,
+.vendor-row.is-hovered::after,
+.queue-item.is-hovered::after,
+.workflow-node.is-hovered::after,
+.metric-card.is-hovered::before {
+  opacity: 1;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.filter-chip:hover,
+.ghost-link:hover {
+  box-shadow: 0 16px 36px rgba(53, 217, 234, 0.14);
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(-22%) rotate(12deg);
+  }
+  100% {
+    transform: translateX(260%) rotate(12deg);
+  }
+}
+
+@media (pointer: coarse) {
+  .cursor-orb,
+  .cursor-ring {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  .panel.reveal-ready,
+  .glass-card.reveal-ready,
+  .vendor-row.reveal-ready,
+  .queue-item.reveal-ready,
+  .workflow-node.reveal-ready,
+  .metric-card.reveal-ready {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 1180px) {

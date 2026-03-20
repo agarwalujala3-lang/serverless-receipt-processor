@@ -2,6 +2,8 @@ const DATA_URL = "./data/demo-dashboard.json";
 const FILTERS = ["ALL", "AUTO_APPROVED", "NEEDS_REVIEW", "DUPLICATE"];
 
 const elements = {
+  cursorOrb: document.querySelector("#cursorOrb"),
+  cursorRing: document.querySelector("#cursorRing"),
   metricsGrid: document.querySelector("#metricsGrid"),
   categoryChart: document.querySelector("#categoryChart"),
   vendorList: document.querySelector("#vendorList"),
@@ -11,11 +13,13 @@ const elements = {
   receiptsBody: document.querySelector("#receiptsBody"),
   filterRow: document.querySelector("#filterRow"),
   modeBadge: document.querySelector("#modeBadge"),
+  statusNote: document.querySelector("#statusNote"),
   riskHeadline: document.querySelector("#riskHeadline"),
 };
 
 let dashboardData = null;
 let activeFilter = "ALL";
+let revealObserver = null;
 
 async function loadDashboard() {
   const apiBase =
@@ -33,6 +37,7 @@ async function loadDashboard() {
       const receiptsPayload = await receiptsResponse.json();
       dashboardData = adaptApiPayload(analytics, receiptsPayload.receipts || []);
       elements.modeBadge.textContent = "Live API";
+      elements.statusNote.textContent = "Connected to live AWS receipt data.";
       renderDashboard();
       return;
     } catch (error) {
@@ -42,6 +47,10 @@ async function loadDashboard() {
 
   const response = await fetch(DATA_URL);
   dashboardData = await response.json();
+  elements.modeBadge.textContent = "Demo Dataset";
+  elements.statusNote.textContent = apiBase
+    ? "Live API was unavailable, showing the dashboard demo dataset."
+    : "Live API is not configured yet, showing the dashboard demo dataset.";
   renderDashboard();
 }
 
@@ -112,6 +121,7 @@ function renderDashboard() {
   renderFilters();
   renderReceipts();
   elements.riskHeadline.textContent = dashboardData.heroHeadline;
+  bindInteractiveFX();
 }
 
 function renderMetrics() {
@@ -263,7 +273,7 @@ function renderTrend() {
 function renderFilters() {
   elements.filterRow.innerHTML = FILTERS.map(
     (filter) => `
-      <button class="filter-chip ${filter === activeFilter ? "active" : ""}" data-filter="${filter}">
+      <button type="button" class="filter-chip ${filter === activeFilter ? "active" : ""}" data-filter="${filter}">
         ${formatLabel(filter)}
       </button>
     `
@@ -358,6 +368,122 @@ function formatLabel(value) {
     .join(" ");
 }
 
+function bindInteractiveFX() {
+  bindGlowTargets();
+  observeRevealTargets();
+}
+
+function bindGlowTargets() {
+  document
+    .querySelectorAll(".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card")
+    .forEach((element) => {
+      if (element.dataset.fxBound === "true") {
+        return;
+      }
+
+      element.dataset.fxBound = "true";
+
+      element.addEventListener("pointermove", (event) => {
+        const bounds = element.getBoundingClientRect();
+        const glowX = ((event.clientX - bounds.left) / bounds.width) * 100;
+        const glowY = ((event.clientY - bounds.top) / bounds.height) * 100;
+        element.style.setProperty("--glow-x", `${glowX}%`);
+        element.style.setProperty("--glow-y", `${glowY}%`);
+      });
+
+      element.addEventListener("pointerenter", () => {
+        element.classList.add("is-hovered");
+        document.body.classList.add("cursor-hover");
+      });
+
+      element.addEventListener("pointerleave", () => {
+        element.classList.remove("is-hovered");
+        document.body.classList.remove("cursor-hover");
+      });
+    });
+}
+
+function observeRevealTargets() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const targets = document.querySelectorAll(
+    ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card"
+  );
+
+  if (reduceMotion) {
+    targets.forEach((target) => {
+      target.classList.remove("reveal-ready");
+      target.classList.add("is-visible");
+    });
+    return;
+  }
+
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.18 }
+    );
+  }
+
+  targets.forEach((target) => {
+    if (target.dataset.revealBound === "true") {
+      return;
+    }
+
+    target.dataset.revealBound = "true";
+    target.classList.add("reveal-ready");
+    revealObserver.observe(target);
+  });
+}
+
+function initCursorFX() {
+  if (!window.matchMedia("(pointer:fine)").matches) {
+    return;
+  }
+
+  const { cursorOrb, cursorRing } = elements;
+  if (!cursorOrb || !cursorRing) {
+    return;
+  }
+
+  document.body.classList.add("cursor-active");
+
+  let pointerX = window.innerWidth / 2;
+  let pointerY = window.innerHeight / 2;
+  let ringX = pointerX;
+  let ringY = pointerY;
+
+  document.addEventListener("pointermove", (event) => {
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    cursorOrb.style.transform = `translate(${pointerX}px, ${pointerY}px)`;
+  });
+
+  document.addEventListener("pointerdown", () => {
+    document.body.classList.add("cursor-hover");
+  });
+
+  document.addEventListener("pointerup", () => {
+    document.body.classList.remove("cursor-hover");
+  });
+
+  const tick = () => {
+    ringX += (pointerX - ringX) * 0.18;
+    ringY += (pointerY - ringY) * 0.18;
+    cursorRing.style.transform = `translate(${ringX}px, ${ringY}px)`;
+    requestAnimationFrame(tick);
+  };
+
+  requestAnimationFrame(tick);
+}
+
+initCursorFX();
 loadDashboard().catch((error) => {
   console.error("Unable to load dashboard.", error);
 });
