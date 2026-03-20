@@ -23,6 +23,20 @@ def lambda_handler(event, context):
     try:
         if method == "OPTIONS":
             return response(200, {"status": "ok"})
+        if method == "GET" and path == "/":
+            return response(
+                200,
+                {
+                    "service": "ReceiptPulse API",
+                    "status": "ok",
+                    "routes": [
+                        "/health",
+                        "/receipts",
+                        "/analytics",
+                        "/exports/csv",
+                    ],
+                },
+            )
         if method == "GET" and path == "/health":
             return response(200, {"status": "ok"})
         if method == "GET" and path == "/receipts":
