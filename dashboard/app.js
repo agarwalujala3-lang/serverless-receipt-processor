@@ -232,7 +232,6 @@ const elements = {
 
 let dashboardData = null;
 let activeFilter = "ALL";
-let revealObserver = null;
 
 function cloneDashboardState(source) {
   return JSON.parse(JSON.stringify(source));
@@ -632,41 +631,13 @@ function bindGlowTargets() {
 }
 
 function observeRevealTargets() {
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const targets = document.querySelectorAll(
     ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card"
   );
 
-  if (reduceMotion) {
-    targets.forEach((target) => {
-      target.classList.remove("reveal-ready");
-      target.classList.add("is-visible");
-    });
-    return;
-  }
-
-  if (!revealObserver) {
-    revealObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("is-visible");
-            revealObserver.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.18 }
-    );
-  }
-
   targets.forEach((target) => {
-    if (target.dataset.revealBound === "true") {
-      return;
-    }
-
-    target.dataset.revealBound = "true";
-    target.classList.add("reveal-ready");
-    revealObserver.observe(target);
+    target.classList.remove("reveal-ready");
+    target.classList.add("is-visible");
   });
 }
 

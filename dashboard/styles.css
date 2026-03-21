@@ -617,8 +617,8 @@ body.cursor-hover .cursor-ring {
 .queue-item.reveal-ready,
 .workflow-node.reveal-ready,
 .metric-card.reveal-ready {
-  opacity: 0;
-  transform: translateY(22px);
+  opacity: 1;
+  transform: none;
   transition:
     opacity 420ms ease,
     transform 420ms ease,
