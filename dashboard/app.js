@@ -1,4 +1,40 @@
 const FILTERS = ["ALL", "AUTO_APPROVED", "NEEDS_REVIEW", "DUPLICATE"];
+const POLL_INTERVAL_MS = 2500;
+const MAX_POLL_ATTEMPTS = 30;
+const HOW_IT_WORKS = [
+  {
+    eyebrow: "Flip Card 01",
+    frontTitle: "Upload Receipts",
+    frontBody: "Send PDFs or images into the pipeline directly from the browser.",
+    backTitle: "Signed Intake",
+    backBody:
+      "The console requests a presigned S3 upload URL, so the file goes straight into the intake bucket instead of through a web server.",
+  },
+  {
+    eyebrow: "Flip Card 02",
+    frontTitle: "AI Extraction",
+    frontBody: "Vendor, totals, dates, and lines are read automatically from each receipt.",
+    backTitle: "Textract AnalyzeExpense",
+    backBody:
+      "The backend uses Textract to convert unstructured receipt files into structured finance records for dashboards and exports.",
+  },
+  {
+    eyebrow: "Flip Card 03",
+    frontTitle: "Quality Gate",
+    frontBody: "Confidence checks and duplicate detection decide if a receipt can auto-flow.",
+    backTitle: "Trust Layer",
+    backBody:
+      "Low-confidence or duplicate receipts are routed into review states before they can affect spend reporting.",
+  },
+  {
+    eyebrow: "Flip Card 04",
+    frontTitle: "Operator Surface",
+    frontBody: "Upload, live status, analytics, and review queue all live in the same product view.",
+    backTitle: "Why It Feels Complete",
+    backBody:
+      "This turns the project from a hidden backend demo into a tool both non-technical and technical users can understand quickly.",
+  },
+];
 const FALLBACK_DASHBOARD = {
   summary: {
     receiptCount: 18,
@@ -228,17 +264,42 @@ const elements = {
   modeBadge: document.querySelector("#modeBadge"),
   statusNote: document.querySelector("#statusNote"),
   riskHeadline: document.querySelector("#riskHeadline"),
+  opsStrip: document.querySelector("#opsStrip"),
+  spotlightKicker: document.querySelector("#spotlightKicker"),
+  spotlightTitle: document.querySelector("#spotlightTitle"),
+  spotlightNarrative: document.querySelector("#spotlightNarrative"),
+  spotlightFacts: document.querySelector("#spotlightFacts"),
+  flipGrid: document.querySelector("#flipGrid"),
+  uploadForm: document.querySelector("#uploadForm"),
+  fileInput: document.querySelector("#fileInput"),
+  dropzone: document.querySelector("#dropzone"),
+  fileMeta: document.querySelector("#fileMeta"),
+  uploadName: document.querySelector("#uploadName"),
+  uploadEmail: document.querySelector("#uploadEmail"),
+  uploadSubmit: document.querySelector("#uploadSubmit"),
+  uploadTimeline: document.querySelector("#uploadTimeline"),
+  uploadMessage: document.querySelector("#uploadMessage"),
 };
 
 let dashboardData = null;
 let activeFilter = "ALL";
+let apiBase = "";
+let uploadState = {
+  phase: "idle",
+  stage: "slot",
+  message: "Select a receipt and trigger the pipeline.",
+  objectKey: "",
+  receipt: null,
+  startedAt: 0,
+  durationMs: null,
+};
 
 function cloneDashboardState(source) {
   return JSON.parse(JSON.stringify(source));
 }
 
 async function loadDashboard() {
-  const apiBase =
+  apiBase =
     new URLSearchParams(window.location.search).get("api") ||
     window.RECEIPTPULSE_CONFIG?.apiBaseUrl ||
     "";
@@ -251,17 +312,9 @@ async function loadDashboard() {
       "Console is ready. Pulling live AWS data in the background.";
 
     try {
-      const snapshotResponse = await fetch(`${apiBase.replace(/\/$/, "")}/snapshot`, {
-        cache: "no-store",
-      });
-      if (!snapshotResponse.ok) {
-        throw new Error(`Snapshot request failed with status ${snapshotResponse.status}`);
-      }
-      const snapshotPayload = await snapshotResponse.json();
-      dashboardData = adaptSnapshotPayload(snapshotPayload);
+      await refreshLiveSnapshot();
       elements.modeBadge.textContent = "Live API";
       elements.statusNote.textContent = "Connected to live AWS receipt data.";
-      renderDashboard();
       return;
     } catch (error) {
       console.error("Live API mode failed, falling back to demo data.", error);
@@ -277,31 +330,56 @@ async function loadDashboard() {
     "Live API is not configured yet, so the console is running from its built-in preview state.";
 }
 
+function mapReceipt(receipt) {
+  return {
+    receiptId: receipt.receiptId || receipt.receipt_id || "receipt",
+    vendor: receipt.vendor || "Unknown Vendor",
+    category: receipt.category || "Uncategorized",
+    reviewStatus: receipt.reviewStatus || receipt.review_status || "UNKNOWN",
+    totalAmount: receipt.totalAmount || receipt.total_amount || "0.00",
+    confidenceScore: receipt.confidenceScore || receipt.confidence_score || "0.00",
+    expenseMonth: receipt.expenseMonth || receipt.expense_month || "--",
+    uploadedBy: receipt.uploadedBy || receipt.uploaded_by || "ops@receiptpulse.dev",
+    fileName: receipt.fileName || receipt.file_name || "receipt",
+    objectKey: receipt.objectKey || receipt.key || "",
+    currencySymbol: receipt.currencySymbol || receipt.currency_symbol || "$",
+    itemCount: Number(receipt.itemCount || receipt.item_count || 0),
+    duplicateOf: receipt.duplicateOf || receipt.duplicate_of || "",
+    reviewReasons: receipt.reviewReasons || receipt.review_reasons || [],
+  };
+}
+
 function adaptApiPayload(analytics, receipts) {
   return {
-    summary: analytics.summary,
-    categoryBreakdown: analytics.categoryBreakdown.map((item) => ({
+    generatedAt: analytics.generatedAt || new Date().toISOString(),
+    summary: analytics.summary || {
+      receiptCount: 0,
+      totalSpend: 0,
+      averageConfidence: 0,
+      duplicateCount: 0,
+      needsReviewCount: 0,
+      autoApprovedCount: 0,
+    },
+    categoryBreakdown: (analytics.categoryBreakdown || []).map((item) => ({
       label: item.label,
       amount: item.amount,
       share: item.share,
     })),
-    topVendors: analytics.topVendors.map((item) => ({
+    topVendors: (analytics.topVendors || []).map((item) => ({
       vendor: item.vendor,
       amount: item.amount,
       share: item.share,
     })),
-    monthlyTrend: analytics.monthlyTrend,
-    reviewQueue: analytics.reviewQueue,
-    receipts: receipts.map((receipt) => ({
-      receiptId: receipt.receipt_id,
-      vendor: receipt.vendor,
-      category: receipt.category,
-      reviewStatus: receipt.review_status,
-      totalAmount: receipt.total_amount,
-      confidenceScore: receipt.confidence_score,
-      expenseMonth: receipt.expense_month,
-      uploadedBy: receipt.uploaded_by,
+    monthlyTrend: analytics.monthlyTrend || [],
+    reviewQueue: (analytics.reviewQueue || []).map((receipt) => ({
+      receiptId: receipt.receiptId || receipt.receipt_id || "receipt",
+      vendor: receipt.vendor || "Unknown Vendor",
+      category: receipt.category || "Uncategorized",
+      totalAmount: receipt.totalAmount || receipt.total_amount || "0.00",
+      reviewStatus: receipt.reviewStatus || receipt.review_status || "UNKNOWN",
+      reasons: receipt.reasons || [],
     })),
+    receipts: receipts.map(mapReceipt),
     workflow: [
       {
         step: "01",
@@ -335,10 +413,16 @@ function adaptApiPayload(analytics, receipts) {
 }
 
 function adaptSnapshotPayload(snapshot) {
-  return adaptApiPayload(snapshot.analytics || {}, snapshot.receipts || []);
+  const adapted = adaptApiPayload(snapshot.analytics || {}, snapshot.receipts || []);
+  adapted.generatedAt = snapshot.generatedAt || new Date().toISOString();
+  return adapted;
 }
 
 function renderDashboard() {
+  renderOpsStrip();
+  renderUploadTimeline();
+  renderSpotlight();
+  renderFlipCards();
   renderMetrics();
   renderCategoryChart();
   renderVendors();
@@ -349,6 +433,193 @@ function renderDashboard() {
   renderReceipts();
   elements.riskHeadline.textContent = dashboardData.heroHeadline;
   bindInteractiveFX();
+}
+
+function renderOpsStrip() {
+  if (!elements.opsStrip) {
+    return;
+  }
+
+  const summary = dashboardData.summary || {};
+  const total = Math.max(Number(summary.receiptCount || 0), 1);
+  const cards = [
+    {
+      label: "Auto-approval rate",
+      value: `${Math.round((Number(summary.autoApprovedCount || 0) / total) * 100)}%`,
+      detail: `${summary.autoApprovedCount || 0} receipts cleared the pipeline automatically.`,
+    },
+    {
+      label: "Review pressure",
+      value: `${Math.round((Number(summary.needsReviewCount || 0) / total) * 100)}%`,
+      detail: `${summary.needsReviewCount || 0} receipts need manual attention.`,
+    },
+    {
+      label: "Duplicate guard",
+      value: `${summary.duplicateCount || 0}`,
+      detail: "Potential repeats were caught before they affected reporting.",
+    },
+    {
+      label: "Snapshot freshness",
+      value: formatFreshness(dashboardData.generatedAt),
+      detail: "How fresh the visible live data is right now.",
+    },
+    {
+      label: "Last pipeline cycle",
+      value: formatProcessingDuration(uploadState.durationMs),
+      detail:
+        uploadState.phase === "success"
+          ? "Measured from secure upload to the receipt appearing in the console."
+          : "Duration appears after the next live receipt is processed end to end.",
+    },
+    {
+      label: "Upload desk",
+      value: formatUploadPhase(uploadState.phase),
+      detail: uploadState.message,
+    },
+  ];
+
+  elements.opsStrip.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="panel ops-card">
+          <p class="eyebrow">${card.label}</p>
+          <strong>${card.value}</strong>
+          <span>${card.detail}</span>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderUploadTimeline() {
+  if (!elements.uploadTimeline) {
+    return;
+  }
+
+  const steps = [
+    ["slot", "Secure Upload Slot", "Create a signed S3 upload session."],
+    ["transfer", "S3 Intake Transfer", "Move the file into the intake bucket."],
+    ["textract", "AI Extraction", "Read vendor, total, date, and line items."],
+    ["quality", "Quality Rules", "Run confidence checks and duplicate detection."],
+    ["stored", "Stored In Console", "Show the processed receipt in the live dashboard."],
+  ];
+  const order = steps.map((step) => step[0]);
+  const activeIndex =
+    uploadState.phase === "idle"
+      ? -1
+      : uploadState.phase === "success"
+        ? order.length - 1
+        : Math.max(order.indexOf(uploadState.stage || "slot"), 0);
+
+  elements.uploadTimeline.innerHTML = steps
+    .map(([id, title, detail], index) => {
+      let tone = "pending";
+      if (index < activeIndex || uploadState.phase === "success") {
+        tone = "done";
+      } else if (index === activeIndex && uploadState.phase !== "idle") {
+        tone = uploadState.phase === "error" ? "error" : "active";
+      }
+
+      return `
+        <article class="timeline-step timeline-${tone}">
+          <span class="timeline-dot">${index + 1}</span>
+          <div>
+            <strong>${title}</strong>
+            <p>${detail}</p>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  elements.uploadMessage.textContent = uploadState.message;
+  if (elements.uploadSubmit) {
+    const busy = ["preparing", "uploading", "processing"].includes(uploadState.phase);
+    elements.uploadSubmit.disabled = busy;
+    elements.uploadSubmit.textContent = busy ? "Processing Receipt..." : "Upload And Process";
+  }
+}
+
+function renderSpotlight() {
+  if (!elements.spotlightTitle) {
+    return;
+  }
+
+  const receipt = uploadState.receipt || dashboardData.receipts[0];
+  if (!receipt) {
+    elements.spotlightKicker.textContent = "Latest extraction";
+    elements.spotlightTitle.textContent = "Waiting for a processed receipt.";
+    elements.spotlightNarrative.textContent =
+      "Upload a receipt to watch the extracted result and routing decision appear here.";
+    elements.spotlightFacts.innerHTML = "";
+    return;
+  }
+
+  elements.spotlightKicker.textContent = uploadState.receipt
+    ? "Freshly processed upload"
+    : "Most recent live receipt";
+  elements.spotlightTitle.textContent = `${receipt.vendor} - ${formatLabel(receipt.reviewStatus)}`;
+  elements.spotlightNarrative.textContent = buildSpotlightNarrative(receipt);
+
+  const facts = [
+    ["Total", `${receipt.currencySymbol || "$"}${Number(receipt.totalAmount || 0).toFixed(2)}`],
+    ["Confidence", `${Number(receipt.confidenceScore || 0).toFixed(1)}%`],
+    ["Category", receipt.category],
+    ["Month", receipt.expenseMonth],
+    ["Items", `${receipt.itemCount || 0}`],
+    ["Process Time", formatProcessingDuration(uploadState.durationMs)],
+    ["Operator", receipt.uploadedBy || "ops@receiptpulse.dev"],
+    ["File", receipt.fileName || "receipt"],
+    ["Duplicate Of", receipt.duplicateOf || "No prior match"],
+  ];
+
+  elements.spotlightFacts.innerHTML = facts
+    .map(
+      ([label, value]) => `
+        <article class="spotlight-stat">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderFlipCards() {
+  if (!elements.flipGrid) {
+    return;
+  }
+
+  elements.flipGrid.innerHTML = HOW_IT_WORKS.map(
+    (card) => `
+      <button class="flip-card" type="button">
+        <span class="flip-card-inner">
+          <span class="flip-card-face flip-card-front">
+            <span class="mini-label">${card.eyebrow}</span>
+            <strong>${card.frontTitle}</strong>
+            <p>${card.frontBody}</p>
+            <span class="flip-cta">Click to flip</span>
+          </span>
+          <span class="flip-card-face flip-card-back">
+            <span class="mini-label">${card.eyebrow}</span>
+            <strong>${card.backTitle}</strong>
+            <p>${card.backBody}</p>
+            <span class="flip-cta">Tap again to return</span>
+          </span>
+        </span>
+      </button>
+    `
+  ).join("");
+
+  elements.flipGrid.querySelectorAll(".flip-card").forEach((card) => {
+    if (card.dataset.bound === "true") {
+      return;
+    }
+    card.dataset.bound = "true";
+    card.addEventListener("click", () => {
+      card.classList.toggle("is-flipped");
+    });
+  });
 }
 
 function renderMetrics() {
@@ -369,6 +640,11 @@ function renderMetrics() {
       value: dashboardData.summary.averageConfidence,
       suffix: "%",
       decimals: 1,
+    },
+    {
+      label: "Auto Approved",
+      value: dashboardData.summary.autoApprovedCount,
+      suffix: "",
     },
     {
       label: "Needs Review",
@@ -400,6 +676,12 @@ function renderMetrics() {
 }
 
 function renderCategoryChart() {
+  if (!dashboardData.categoryBreakdown.length) {
+    elements.categoryChart.innerHTML =
+      '<p class="muted">No category data is available yet.</p>';
+    return;
+  }
+
   const maxAmount = Math.max(...dashboardData.categoryBreakdown.map((item) => item.amount), 1);
   elements.categoryChart.innerHTML = dashboardData.categoryBreakdown
     .map(
@@ -419,6 +701,12 @@ function renderCategoryChart() {
 }
 
 function renderVendors() {
+  if (!dashboardData.topVendors.length) {
+    elements.vendorList.innerHTML =
+      '<p class="muted">Vendor concentration appears once receipts are processed.</p>';
+    return;
+  }
+
   elements.vendorList.innerHTML = dashboardData.topVendors
     .map(
       (vendor) => `
@@ -479,6 +767,12 @@ function renderQueue() {
 }
 
 function renderTrend() {
+  if (!dashboardData.monthlyTrend.length) {
+    elements.trendBars.innerHTML =
+      '<p class="muted">Monthly throughput appears once receipts reach storage.</p>';
+    return;
+  }
+
   const maxAmount = Math.max(...dashboardData.monthlyTrend.map((item) => item.amount), 1);
   elements.trendBars.innerHTML = dashboardData.monthlyTrend
     .map(
@@ -520,14 +814,22 @@ function renderReceipts() {
     activeFilter === "ALL" ? true : receipt.reviewStatus === activeFilter
   );
 
+  if (!rows.length) {
+    elements.receiptsBody.innerHTML =
+      '<tr><td colspan="7" class="muted receipt-empty">No receipts match this filter.</td></tr>';
+    return;
+  }
+
+  const latestId = uploadState.receipt?.receiptId || "";
+
   elements.receiptsBody.innerHTML = rows
     .map(
       (receipt) => `
-        <tr>
+        <tr class="${receipt.receiptId === latestId ? "receipt-highlight-row" : ""}">
           <td>
-            <div class="receipt-line">
+            <div class="receipt-stack">
               <strong>${receipt.receiptId}</strong>
-              <span class="muted">${receipt.uploadedBy || "ops@receiptpulse.dev"}</span>
+              <span class="muted">${receipt.fileName || receipt.uploadedBy || "ops@receiptpulse.dev"}</span>
             </div>
           </td>
           <td>${receipt.vendor}</td>
@@ -537,7 +839,7 @@ function renderReceipts() {
               ${formatLabel(receipt.reviewStatus)}
             </span>
           </td>
-          <td>$${Number(receipt.totalAmount).toFixed(2)}</td>
+          <td>${receipt.currencySymbol || "$"}${Number(receipt.totalAmount).toFixed(2)}</td>
           <td>${Number(receipt.confidenceScore).toFixed(1)}%</td>
           <td>${receipt.expenseMonth}</td>
         </tr>
@@ -578,6 +880,8 @@ function metricDescription(label) {
       return "Structured totals available for exports and dashboards.";
     case "Average Confidence":
       return "Textract-derived score used for review routing.";
+    case "Auto Approved":
+      return "Receipts that cleared the rule engine without manual review.";
     case "Needs Review":
       return "Receipts flagged for low confidence or missing key data.";
     case "Duplicate Signals":
@@ -587,12 +891,80 @@ function metricDescription(label) {
   }
 }
 
+function buildSpotlightNarrative(receipt) {
+  const reasons = receipt.reviewReasons?.length
+    ? ` Review reasons: ${receipt.reviewReasons.join(" ")}`
+    : "";
+  return `${receipt.vendor} was classified as ${receipt.category} with a ${Number(
+    receipt.confidenceScore || 0
+  ).toFixed(1)}% confidence score and routed to ${formatLabel(
+    receipt.reviewStatus
+  ).toLowerCase()}.${reasons}`;
+}
+
 function formatLabel(value) {
-  return value
+  return String(value || "")
     .toLowerCase()
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatUploadPhase(phase) {
+  if (phase === "preparing") return "Securing";
+  if (phase === "uploading") return "Uploading";
+  if (phase === "processing") return "Processing";
+  if (phase === "success") return "Complete";
+  if (phase === "error") return "Needs Retry";
+  return "Ready";
+}
+
+function formatFreshness(isoString) {
+  const stamp = new Date(isoString).getTime();
+  if (!stamp) {
+    return "Unknown";
+  }
+
+  const diffMinutes = Math.max(0, Math.round((Date.now() - stamp) / 60000));
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes === 1) return "1 minute ago";
+  if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+  return `${Math.round(diffMinutes / 60)} hours ago`;
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function formatProcessingDuration(durationMs) {
+  if (!durationMs || durationMs < 1) {
+    return "Pending";
+  }
+
+  if (durationMs < 1000) {
+    return `${Math.round(durationMs)} ms`;
+  }
+
+  return `${(durationMs / 1000).toFixed(1)} s`;
+}
+
+function guessContentType(file) {
+  if (file.type) return file.type;
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pdf")) return "application/pdf";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
+function isSupportedFile(file) {
+  return ["application/pdf", "image/png", "image/jpeg"].includes(guessContentType(file));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function bindInteractiveFX() {
@@ -602,7 +974,9 @@ function bindInteractiveFX() {
 
 function bindGlowTargets() {
   document
-    .querySelectorAll(".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card")
+    .querySelectorAll(
+      ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card, .ops-card, .spotlight-stat, .flip-card, .timeline-step, .dropzone"
+    )
     .forEach((element) => {
       if (element.dataset.fxBound === "true") {
         return;
@@ -632,13 +1006,214 @@ function bindGlowTargets() {
 
 function observeRevealTargets() {
   const targets = document.querySelectorAll(
-    ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card"
+    ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card, .ops-card, .spotlight-stat, .flip-card, .timeline-step"
   );
 
   targets.forEach((target) => {
     target.classList.remove("reveal-ready");
     target.classList.add("is-visible");
   });
+}
+
+function bindUploadControls() {
+  if (!elements.uploadForm || elements.uploadForm.dataset.bound === "true") {
+    return;
+  }
+
+  elements.uploadForm.dataset.bound = "true";
+
+  elements.fileInput.addEventListener("change", () => {
+    const file = elements.fileInput.files[0] || null;
+    elements.fileMeta.textContent = file
+      ? `${file.name} - ${formatFileSize(file.size)} - ready for upload`
+      : "No receipt selected yet.";
+  });
+
+  elements.uploadForm.addEventListener("submit", handleUpload);
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    elements.dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      elements.dropzone.classList.add("is-dragging");
+    });
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    elements.dropzone.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      elements.dropzone.classList.remove("is-dragging");
+    });
+  });
+
+  elements.dropzone.addEventListener("drop", (event) => {
+    const file = event.dataTransfer?.files?.[0] || null;
+    if (!file) {
+      return;
+    }
+
+    if (typeof DataTransfer !== "undefined") {
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      elements.fileInput.files = transfer.files;
+    }
+
+    elements.fileMeta.textContent = `${file.name} - ${formatFileSize(file.size)} - ready for upload`;
+  });
+}
+
+async function handleUpload(event) {
+  event.preventDefault();
+
+  if (!apiBase) {
+    setUploadState("error", "slot", "Live API is not configured, so uploads cannot run here.");
+    return;
+  }
+
+  const file = elements.fileInput.files[0];
+  if (!file) {
+    setUploadState("error", "slot", "Choose a receipt file first.");
+    return;
+  }
+
+  if (!isSupportedFile(file)) {
+    setUploadState("error", "slot", "Use a PDF, PNG, JPG, or JPEG receipt.");
+    return;
+  }
+
+  const uploaderName = elements.uploadName.value.trim() || "Finance Desk";
+  const uploaderEmail = elements.uploadEmail.value.trim() || "ops@receiptpulse.dev";
+
+  try {
+    uploadState = {
+      ...uploadState,
+      objectKey: "",
+      receipt: null,
+      startedAt: Date.now(),
+      durationMs: null,
+    };
+    setUploadState("preparing", "slot", "Requesting a secure upload slot from the API.");
+
+    const session = await requestUploadSession(file, uploaderName, uploaderEmail);
+    uploadState.objectKey = session.objectKey;
+
+    setUploadState("uploading", "transfer", "Uploading the receipt into the S3 intake bucket.");
+    await uploadToS3(session, file);
+
+    setUploadState("processing", "textract", "Receipt uploaded. AI extraction is running.");
+    const processedReceipt = await pollUntilProcessed(
+      session.objectKey,
+      session.pollAfterMs || POLL_INTERVAL_MS
+    );
+
+    uploadState.receipt = processedReceipt;
+    uploadState.durationMs = Math.max(0, Date.now() - uploadState.startedAt);
+    setUploadState("success", "stored", "Receipt processed and added to the console.");
+    await refreshLiveSnapshot();
+  } catch (error) {
+    console.error("Upload failed.", error);
+    setUploadState("error", uploadState.stage || "transfer", error.message || "Upload failed.");
+  }
+}
+
+async function requestUploadSession(file, uploaderName, uploaderEmail) {
+  const response = await fetch(`${apiBase.replace(/\/$/, "")}/uploads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fileName: file.name,
+      contentType: guessContentType(file),
+      uploaderName,
+      uploaderEmail,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Unable to create upload session (${response.status}).`);
+  }
+
+  return response.json();
+}
+
+async function uploadToS3(session, file) {
+  const headers = new Headers();
+  Object.entries(session.headers || {}).forEach(([key, value]) => headers.set(key, value));
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", guessContentType(file));
+  }
+
+  const response = await fetch(session.uploadUrl, {
+    method: "PUT",
+    headers,
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Upload to S3 failed (${response.status}).`);
+  }
+}
+
+async function pollUntilProcessed(objectKey, firstDelay) {
+  let lastMessage = "Receipt is still processing.";
+
+  for (let attempt = 1; attempt <= MAX_POLL_ATTEMPTS; attempt += 1) {
+    await sleep(attempt === 1 ? firstDelay : POLL_INTERVAL_MS);
+
+    const response = await fetch(
+      `${apiBase.replace(/\/$/, "")}/uploads/status?key=${encodeURIComponent(objectKey)}`,
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Status polling failed (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    lastMessage = payload.message || lastMessage;
+
+    if (payload.status === "PROCESSED" && payload.receipt) {
+      return mapReceipt(payload.receipt);
+    }
+
+    const stage = payload.stage === "stored" ? "quality" : payload.stage || "textract";
+    setUploadState("processing", stage, lastMessage);
+  }
+
+  throw new Error(lastMessage);
+}
+
+async function refreshLiveSnapshot() {
+  const snapshotResponse = await fetch(`${apiBase.replace(/\/$/, "")}/snapshot`, {
+    cache: "no-store",
+  });
+  if (!snapshotResponse.ok) {
+    throw new Error(`Snapshot request failed with status ${snapshotResponse.status}`);
+  }
+
+  const snapshotPayload = await snapshotResponse.json();
+  dashboardData = adaptSnapshotPayload(snapshotPayload);
+
+  if (uploadState.receipt?.objectKey) {
+    const matched = dashboardData.receipts.find(
+      (receipt) => receipt.objectKey === uploadState.receipt.objectKey
+    );
+    if (matched) {
+      uploadState.receipt = matched;
+    }
+  }
+
+  renderDashboard();
+}
+
+function setUploadState(phase, stage, message) {
+  uploadState = {
+    ...uploadState,
+    phase,
+    stage,
+    message,
+  };
+  renderOpsStrip();
+  renderUploadTimeline();
+  renderSpotlight();
 }
 
 function initCursorFX() {
@@ -682,6 +1257,7 @@ function initCursorFX() {
   requestAnimationFrame(tick);
 }
 
+bindUploadControls();
 initCursorFX();
 loadDashboard().catch((error) => {
   console.error("Unable to load dashboard.", error);

@@ -1,6 +1,8 @@
 import csv
 import json
 import os
+import re
+import uuid
 from collections import defaultdict
 from decimal import Decimal
 from datetime import datetime, timezone
@@ -8,11 +10,15 @@ from io import StringIO
 import time
 
 import boto3
+from botocore.exceptions import ClientError
 
 
+s3 = boto3.client("s3")
 dynamodb = boto3.resource("dynamodb")
 RECEIPT_TABLE = os.environ.get("DYNAMODB_TABLE", "ReceiptRecords")
+RECEIPT_BUCKET = os.environ.get("RECEIPT_BUCKET", "")
 CACHE_TTL_SECONDS = int(os.environ.get("SNAPSHOT_CACHE_TTL_SECONDS", "15"))
+UPLOAD_URL_EXPIRES_IN = int(os.environ.get("UPLOAD_URL_EXPIRES_IN", "900"))
 _SNAPSHOT_CACHE = {"expires_at": 0.0, "payload": None}
 
 
@@ -41,12 +47,20 @@ def lambda_handler(event, context):
                         "/snapshot",
                         "/receipts",
                         "/analytics",
+                        "/uploads",
+                        "/uploads/status",
                         "/exports/csv",
                     ],
                 },
             )
         if method == "GET" and path == "/health":
             return response(200, {"status": "ok"})
+        if method == "POST" and path == "/uploads":
+            body = json.loads(event.get("body") or "{}")
+            return response(200, create_upload_session(body))
+        if method == "GET" and path == "/uploads/status":
+            query_params = event.get("queryStringParameters") or {}
+            return response(200, get_upload_status(query_params.get("key")))
         if method == "GET" and path == "/receipts":
             snapshot = get_snapshot_payload()
             receipts = filter_receipts(
@@ -79,8 +93,10 @@ def scan_receipts():
         "ProjectionExpression": (
             "receipt_id, vendor, category, review_status, total_amount, "
             "confidence_score, expense_month, uploaded_by, s3_path, "
-            "processed_timestamp, is_duplicate, review_reasons"
-        )
+            "processed_timestamp, is_duplicate, review_reasons, file_name, "
+            "currency_symbol, duplicate_of, item_count, #receipt_key"
+        ),
+        "ExpressionAttributeNames": {"#receipt_key": "key"},
     }
     response = table.scan(**scan_args)
     items.extend(response.get("Items", []))
@@ -114,6 +130,97 @@ def get_snapshot_payload(force_refresh=False):
     _SNAPSHOT_CACHE["payload"] = payload
     _SNAPSHOT_CACHE["expires_at"] = now + CACHE_TTL_SECONDS
     return payload
+
+
+def create_upload_session(payload):
+    if not RECEIPT_BUCKET:
+        raise ValueError("Receipt bucket is not configured for uploads.")
+
+    file_name = sanitize_filename(payload.get("fileName") or "receipt-upload")
+    content_type = payload.get("contentType") or "application/octet-stream"
+    uploader_email = (payload.get("uploaderEmail") or "ops@receiptpulse.dev").strip()
+    uploader_name = (payload.get("uploaderName") or "Finance Desk").strip()
+    stamp = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+    object_key = f"incoming/{stamp}/{uuid.uuid4().hex[:12]}-{file_name}"
+    metadata = {
+        "uploader-email": uploader_email[:120],
+        "uploader-name": uploader_name[:120],
+    }
+
+    upload_url = s3.generate_presigned_url(
+        "put_object",
+        Params={
+            "Bucket": RECEIPT_BUCKET,
+            "Key": object_key,
+            "ContentType": content_type,
+            "Metadata": metadata,
+        },
+        ExpiresIn=UPLOAD_URL_EXPIRES_IN,
+    )
+
+    return {
+        "uploadUrl": upload_url,
+        "objectKey": object_key,
+        "s3Path": f"s3://{RECEIPT_BUCKET}/{object_key}",
+        "expiresIn": UPLOAD_URL_EXPIRES_IN,
+        "headers": {
+            "Content-Type": content_type,
+            "x-amz-meta-uploader-email": metadata["uploader-email"],
+            "x-amz-meta-uploader-name": metadata["uploader-name"],
+        },
+        "pollAfterMs": 2200,
+    }
+
+
+def get_upload_status(object_key):
+    receipt = find_receipt_by_key(object_key, force_refresh=True)
+    if receipt:
+        return {
+            "status": "PROCESSED",
+            "stage": "stored",
+            "receipt": serialize_receipt(receipt),
+            "message": "Receipt processed and available in the operations console.",
+        }
+
+    if not object_key:
+        return {
+            "status": "INVALID",
+            "stage": "intake",
+            "message": "Upload key is missing.",
+        }
+
+    try:
+        head = s3.head_object(Bucket=RECEIPT_BUCKET, Key=object_key)
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "")
+        if error_code in {"404", "NotFound", "NoSuchKey"}:
+            return {
+                "status": "NOT_FOUND",
+                "stage": "intake",
+                "message": "Receipt file was not found in storage.",
+            }
+        raise
+
+    return {
+        "status": "PROCESSING",
+        "stage": "textract",
+        "objectKey": object_key,
+        "lastModified": head.get("LastModified", datetime.now(timezone.utc)).astimezone(
+            timezone.utc
+        ).isoformat(),
+        "message": "Receipt uploaded. AI extraction and rule checks are running now.",
+    }
+
+
+def find_receipt_by_key(object_key, force_refresh=False):
+    if not object_key:
+        return None
+
+    snapshot = get_snapshot_payload(force_refresh=force_refresh)
+    for receipt in snapshot["receipts"]:
+        if receipt.get("key") == object_key:
+            return receipt
+    return None
 
 
 def filter_receipts(receipts, query_params):
@@ -272,6 +379,27 @@ def invalidate_snapshot_cache():
     _SNAPSHOT_CACHE["expires_at"] = 0.0
 
 
+def serialize_receipt(receipt):
+    return {
+        "receiptId": receipt.get("receipt_id"),
+        "vendor": receipt.get("vendor", "Unknown Vendor"),
+        "category": receipt.get("category", "Uncategorized"),
+        "reviewStatus": receipt.get("review_status", "UNKNOWN"),
+        "totalAmount": receipt.get("total_amount", "0.00"),
+        "confidenceScore": receipt.get("confidence_score", "0.00"),
+        "expenseMonth": receipt.get("expense_month"),
+        "uploadedBy": receipt.get("uploaded_by"),
+        "s3Path": receipt.get("s3_path"),
+        "processedAt": receipt.get("processed_timestamp"),
+        "fileName": receipt.get("file_name"),
+        "objectKey": receipt.get("key"),
+        "currencySymbol": receipt.get("currency_symbol", "$"),
+        "duplicateOf": receipt.get("duplicate_of"),
+        "itemCount": receipt.get("item_count", 0),
+        "reviewReasons": receipt.get("review_reasons", []),
+    }
+
+
 def sort_breakdown(values, key_name="label"):
     total = sum(values.values()) or 1
     rows = []
@@ -293,6 +421,12 @@ def parse_float(value):
         return 0.0
 
 
+def sanitize_filename(value):
+    basename = os.path.basename(str(value).strip())
+    sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", basename).strip(".-")
+    return sanitized or "receipt-upload"
+
+
 def response(status_code, payload, content_type="application/json"):
     body = payload if isinstance(payload, str) else json.dumps(normalize_payload(payload))
     cache_control = "no-store"
@@ -303,7 +437,7 @@ def response(status_code, payload, content_type="application/json"):
         "headers": {
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Methods": "GET, PATCH, OPTIONS",
+            "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
             "Content-Type": content_type,
             "Cache-Control": cache_control,
         },

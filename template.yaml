@@ -26,7 +26,7 @@ Parameters:
     Description: Enable SES notification delivery after receipt processing.
   ReadObjectMetadata:
     Type: String
-    Default: "false"
+    Default: "true"
     AllowedValues:
       - "true"
       - "false"
@@ -46,11 +46,25 @@ Globals:
         SNAPSHOT_CACHE_TTL_SECONDS: !Ref SnapshotCacheTtlSeconds
         SEND_EMAIL_NOTIFICATIONS: !Ref SendEmailNotifications
         READ_OBJECT_METADATA: !Ref ReadObjectMetadata
+        RECEIPT_BUCKET: !Ref ReceiptBucket
 
 Resources:
   ReceiptBucket:
     Type: AWS::S3::Bucket
     Properties:
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - PUT
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - "*"
+            ExposedHeaders:
+              - ETag
+            MaxAge: 300
       NotificationConfiguration:
         EventBridgeConfiguration:
           EventBridgeEnabled: true
@@ -130,6 +144,7 @@ Resources:
           - Content-Type
         AllowMethods:
           - GET
+          - POST
           - PATCH
           - OPTIONS
         AllowOrigins:
@@ -183,6 +198,18 @@ Resources:
             ApiId: !Ref ReceiptApi
             Method: PATCH
             Path: /receipts/{receiptId}/review
+        UploadRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ReceiptApi
+            Method: POST
+            Path: /uploads
+        UploadStatusRoute:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ReceiptApi
+            Method: GET
+            Path: /uploads/status
         WarmSchedule:
           Type: Schedule
           Properties:
@@ -191,6 +218,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref ReceiptTable
+        - S3CrudPolicy:
+            BucketName: !Ref ReceiptBucket
 
 Outputs:
   ReceiptBucketName:

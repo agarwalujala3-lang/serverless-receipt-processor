@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321a" />
+    <link rel="stylesheet" href="./styles.css?v=20260321c" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -28,48 +28,129 @@
       <div class="topbar-actions">
         <span class="status-pill" id="modeBadge">Demo Dataset</span>
         <span class="status-note" id="statusNote">Booting console.</span>
-        <a class="ghost-link" href="../README.md">Architecture Notes</a>
+        <a class="ghost-link" href="https://github.com/agarwalujala3-lang/ReceiptPulse" target="_blank" rel="noreferrer">Architecture Notes</a>
       </div>
     </header>
 
     <main class="shell">
-      <section class="hero panel">
-        <div class="hero-copy">
-          <p class="eyebrow">From upload to finance-ready insight</p>
-          <h2>Turn raw receipt files into categorized, reviewable, exportable expense records.</h2>
-          <p class="hero-text">
-            ReceiptPulse combines S3, Lambda, Textract, DynamoDB, SES, and an API-driven review
-            layer to process receipts like a serious cloud product instead of a one-step demo.
-          </p>
-          <div class="hero-actions">
-            <a class="primary-button" href="#reviewQueue">Review Queue</a>
-            <a class="secondary-button" href="#receiptsTable">Explore Receipts</a>
-          </div>
-        </div>
-        <div class="hero-grid">
-          <article class="glass-card spotlight">
-            <span class="mini-label">Risk Gate</span>
-            <strong id="riskHeadline">Low-confidence receipts routed automatically.</strong>
-            <p>Confidence scoring, duplicate detection, and review status keep the pipeline trustworthy.</p>
-          </article>
-          <article class="glass-card">
-            <span class="mini-label">Cloud Flow</span>
-            <div class="pipeline">
-              <span>S3</span>
-              <span>Textract</span>
-              <span>DynamoDB</span>
-              <span>SES</span>
-              <span>API</span>
-            </div>
-          </article>
-          <article class="glass-card">
-            <span class="mini-label">Live Value</span>
-            <p>
-              A finance team gets searchable history, a review queue, category analytics, and export
-              access without managing servers.
+      <section class="control-grid">
+        <section class="hero panel">
+          <div class="hero-copy">
+            <p class="eyebrow">From upload to finance-ready insight</p>
+            <h2>Drop in a receipt and let AI extract, classify, score, and route it automatically.</h2>
+            <p class="hero-text">
+              ReceiptPulse now works like a live operator console. Upload receipts from this page,
+              watch the processing stages move, and inspect the extracted result as soon as the
+              serverless pipeline finishes.
             </p>
-          </article>
-        </div>
+            <div class="hero-actions">
+              <a class="primary-button" href="#uploadLab">Upload Receipt</a>
+              <a class="secondary-button" href="#receiptsTable">Explore Receipts</a>
+            </div>
+          </div>
+          <div class="hero-grid">
+            <article class="glass-card spotlight">
+              <span class="mini-label">Quality Gate</span>
+              <strong id="riskHeadline">Low-confidence receipts routed automatically.</strong>
+              <p>Confidence scoring, duplicate detection, and review status keep the pipeline trustworthy.</p>
+            </article>
+            <article class="glass-card">
+              <span class="mini-label">Cloud Flow</span>
+              <div class="pipeline">
+                <span>S3 Intake</span>
+                <span>Textract</span>
+                <span>AI Rules</span>
+                <span>DynamoDB</span>
+                <span>Exports</span>
+              </div>
+            </article>
+            <article class="glass-card">
+              <span class="mini-label">Operator View</span>
+              <p>
+                One screen for upload, extraction status, review queue, and spend analytics instead
+                of a hidden backend demo.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <aside class="panel upload-lab" id="uploadLab">
+          <div class="section-heading section-heading-tight">
+            <div>
+              <p class="eyebrow">Receipt Intake</p>
+              <h3>Upload a receipt and trigger the full pipeline</h3>
+            </div>
+            <span class="status-tag status-auto-approved upload-ready-pill">Live</span>
+          </div>
+
+          <form class="upload-form" id="uploadForm">
+            <label class="dropzone" id="dropzone" for="fileInput">
+              <input id="fileInput" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden />
+              <span class="drop-kicker">Drop receipt or browse</span>
+              <strong class="drop-title">PDF, PNG, JPG, or JPEG</strong>
+              <span class="drop-copy" id="fileMeta">No receipt selected yet.</span>
+            </label>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>Operator name</span>
+                <input class="text-input" id="uploadName" type="text" placeholder="Finance desk" />
+              </label>
+              <label class="field">
+                <span>Operator email</span>
+                <input class="text-input" id="uploadEmail" type="email" placeholder="finance@company.com" />
+              </label>
+            </div>
+
+            <div class="upload-actions-row">
+              <button class="primary-button upload-submit" id="uploadSubmit" type="submit">
+                Upload And Process
+              </button>
+              <span class="upload-helper">Presigned upload, AI extraction, duplicate check, and review routing.</span>
+            </div>
+          </form>
+
+          <div class="upload-status-card">
+            <div class="upload-status-head">
+              <p class="eyebrow">Processing Timeline</p>
+              <span class="muted" id="uploadMessage">Ready for the next receipt.</span>
+            </div>
+            <div class="timeline-list" id="uploadTimeline"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="ops-strip" id="opsStrip"></section>
+
+      <section class="mission-grid">
+        <article class="panel spotlight-panel">
+          <div class="section-heading section-heading-tight">
+            <div>
+              <p class="eyebrow">Latest Extraction</p>
+              <h3>Receipt spotlight</h3>
+            </div>
+          </div>
+          <div class="spotlight-shell">
+            <div class="spotlight-copy">
+              <p class="spotlight-kicker" id="spotlightKicker">Most recent receipt</p>
+              <h3 class="spotlight-title" id="spotlightTitle">Waiting for a processed receipt.</h3>
+              <p class="spotlight-narrative" id="spotlightNarrative">
+                Upload a receipt to watch the extraction summary, quality score, and routing decision appear here.
+              </p>
+            </div>
+            <div class="spotlight-facts" id="spotlightFacts"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="section-heading section-heading-tight">
+            <div>
+              <p class="eyebrow">How It Works</p>
+              <h3>Flip the system cards</h3>
+            </div>
+          </div>
+          <div class="flip-grid" id="flipGrid"></div>
+        </article>
       </section>
 
       <section class="metrics-grid" id="metricsGrid"></section>
@@ -155,7 +236,7 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260321a"></script>
-    <script src="./app.js?v=20260321a" defer></script>
+    <script src="./config.js?v=20260321c"></script>
+    <script src="./app.js?v=20260321c" defer></script>
   </body>
 </html>
