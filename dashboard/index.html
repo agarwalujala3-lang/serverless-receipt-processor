@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321c" />
+    <link rel="stylesheet" href="./styles.css?v=20260321d" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -28,6 +28,15 @@
       <div class="topbar-actions">
         <span class="status-pill" id="modeBadge">Demo Dataset</span>
         <span class="status-note" id="statusNote">Booting console.</span>
+        <button class="ghost-link ghost-button" id="historyToggle" type="button">Upload History</button>
+        <a
+          class="ghost-link"
+          href="https://github.com/agarwalujala3-lang/ReceiptPulse/blob/main/docs/deployment.md#custom-domain-on-cloudfront"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Custom Domain
+        </a>
         <a class="ghost-link" href="https://github.com/agarwalujala3-lang/ReceiptPulse" target="_blank" rel="noreferrer">Architecture Notes</a>
       </div>
     </header>
@@ -71,6 +80,13 @@
                 of a hidden backend demo.
               </p>
             </article>
+            <article class="glass-card">
+              <span class="mini-label">Launch Ready</span>
+              <p>
+                CloudFront-hosted frontend, serverless API backend, and a custom-domain path ready
+                for final branding.
+              </p>
+            </article>
           </div>
         </section>
 
@@ -90,6 +106,30 @@
               <strong class="drop-title">PDF, PNG, JPG, or JPEG</strong>
               <span class="drop-copy" id="fileMeta">No receipt selected yet.</span>
             </label>
+
+            <div class="upload-preview-shell">
+              <div class="upload-preview-frame" id="previewFrame">
+                <div class="preview-empty">
+                  <span class="mini-label">Preview</span>
+                  <strong>Receipt preview will appear here</strong>
+                  <p>Image receipts show a live thumbnail. PDFs get a document preview card with file metadata.</p>
+                </div>
+              </div>
+              <div class="preview-meta" id="previewMeta">
+                <article class="preview-stat">
+                  <span>Status</span>
+                  <strong>Awaiting file</strong>
+                </article>
+                <article class="preview-stat">
+                  <span>Type</span>
+                  <strong>Receipt</strong>
+                </article>
+                <article class="preview-stat">
+                  <span>Visibility</span>
+                  <strong>Browser-side preview</strong>
+                </article>
+              </div>
+            </div>
 
             <div class="field-grid">
               <label class="field">
@@ -236,7 +276,25 @@
       </section>
     </main>
 
-    <script src="./config.js?v=20260321c"></script>
-    <script src="./app.js?v=20260321c" defer></script>
+    <div class="history-scrim" id="historyScrim" hidden></div>
+    <aside class="history-drawer" id="historyDrawer" aria-hidden="true">
+      <div class="history-head">
+        <div>
+          <p class="eyebrow">Recent Uploads</p>
+          <h3>Receipt intake history</h3>
+        </div>
+        <button class="ghost-link ghost-button" id="historyClose" type="button">Close</button>
+      </div>
+      <p class="history-copy">
+        This panel keeps the most recent browser-side uploads so a recruiter or reviewer can see
+        the system behaving like a product, not a static demo.
+      </p>
+      <div class="history-list" id="historyList"></div>
+    </aside>
+
+    <div class="success-burst" id="successBurst" aria-hidden="true"></div>
+
+    <script src="./config.js?v=20260321d"></script>
+    <script src="./app.js?v=20260321d" defer></script>
   </body>
 </html>

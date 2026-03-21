@@ -9,9 +9,10 @@ The project now reads like a product instead of a single Lambda demo:
 - smart receipt enrichment with category, confidence, review status, and duplicate keys
 - review and analytics API for operations workflows
 - premium dashboard UI for technical and non-technical viewers
+- live browser upload console with preview, history drawer, and processing timeline
 - SAM template for backend deployment
 - Amplify build configuration for static frontend hosting
-- deployment docs for AWS launch
+- deployment docs for AWS launch and custom-domain finish
 
 ## Architecture
 
@@ -70,6 +71,9 @@ The dashboard in [dashboard](./dashboard) is designed to look strong for both re
 It includes:
 
 - premium hero section
+- receipt upload with live preview
+- saved browser-side upload history drawer
+- success burst animation when a receipt clears the pipeline
 - animated metric counters
 - category spend bars
 - vendor spend heatmap
@@ -191,6 +195,12 @@ API_BASE_URL=https://your-api-id.execute-api.ap-south-1.amazonaws.com
 Amplify will publish the dashboard and inject the API URL into [dashboard/config.js](./dashboard/config.js) during the build.
 
 Detailed steps are in [docs/deployment.md](./docs/deployment.md).
+
+### Custom Domain
+
+The live frontend can be finished under a branded domain by attaching an ACM certificate and alias
+to the CloudFront distribution. The exact Route 53 / DNS steps are documented in
+[docs/deployment.md](./docs/deployment.md#custom-domain-on-cloudfront).
 
 ## SES Note
 

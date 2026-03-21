@@ -1,6 +1,8 @@
 const FILTERS = ["ALL", "AUTO_APPROVED", "NEEDS_REVIEW", "DUPLICATE"];
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLL_ATTEMPTS = 30;
+const HISTORY_STORAGE_KEY = "receiptpulse-upload-history";
+const MAX_HISTORY_ITEMS = 8;
 const HOW_IT_WORKS = [
   {
     eyebrow: "Flip Card 01",
@@ -274,16 +276,27 @@ const elements = {
   fileInput: document.querySelector("#fileInput"),
   dropzone: document.querySelector("#dropzone"),
   fileMeta: document.querySelector("#fileMeta"),
+  previewFrame: document.querySelector("#previewFrame"),
+  previewMeta: document.querySelector("#previewMeta"),
   uploadName: document.querySelector("#uploadName"),
   uploadEmail: document.querySelector("#uploadEmail"),
   uploadSubmit: document.querySelector("#uploadSubmit"),
   uploadTimeline: document.querySelector("#uploadTimeline"),
   uploadMessage: document.querySelector("#uploadMessage"),
+  historyToggle: document.querySelector("#historyToggle"),
+  historyClose: document.querySelector("#historyClose"),
+  historyDrawer: document.querySelector("#historyDrawer"),
+  historyList: document.querySelector("#historyList"),
+  historyScrim: document.querySelector("#historyScrim"),
+  successBurst: document.querySelector("#successBurst"),
 };
 
 let dashboardData = null;
 let activeFilter = "ALL";
 let apiBase = "";
+let uploadHistory = loadUploadHistory();
+let previewObjectUrl = "";
+let latestPreview = null;
 let uploadState = {
   phase: "idle",
   stage: "slot",
@@ -423,6 +436,7 @@ function renderDashboard() {
   renderUploadTimeline();
   renderSpotlight();
   renderFlipCards();
+  renderUploadHistory();
   renderMetrics();
   renderCategoryChart();
   renderVendors();
@@ -620,6 +634,54 @@ function renderFlipCards() {
       card.classList.toggle("is-flipped");
     });
   });
+}
+
+function renderUploadHistory() {
+  if (!elements.historyList) {
+    return;
+  }
+
+  if (elements.historyToggle) {
+    elements.historyToggle.textContent = `Upload History (${uploadHistory.length})`;
+  }
+
+  if (!uploadHistory.length) {
+    elements.historyList.innerHTML = `
+      <article class="history-empty">
+        No uploads have been saved in this browser yet. Process a receipt once and this drawer turns
+        into a running activity log with status, amount, and preview context.
+      </article>
+    `;
+    return;
+  }
+
+  elements.historyList.innerHTML = uploadHistory
+    .map(
+      (entry) => `
+        <article class="history-item panel">
+          ${
+            entry.previewDataUrl
+              ? `<img class="history-thumb" src="${entry.previewDataUrl}" alt="${entry.fileName} preview" />`
+              : `<div class="history-thumb-placeholder">${entry.previewType === "pdf" ? "PDF" : "FILE"}</div>`
+          }
+          <div class="history-meta">
+            <div class="history-topline">
+              <span class="history-name">${entry.fileName}</span>
+              <span class="status-tag status-${entry.reviewStatus.toLowerCase().replace(/_/g, "-")}">${formatLabel(entry.reviewStatus)}</span>
+            </div>
+            <div class="history-subline">
+              <strong>${entry.vendor}</strong>
+              <span class="muted">${entry.currencySymbol}${Number(entry.totalAmount || 0).toFixed(2)}</span>
+            </div>
+            <div class="history-subline">
+              <span class="muted">${formatRelativeTime(entry.processedAt)}</span>
+              <span class="muted">${formatProcessingDuration(entry.durationMs)}</span>
+            </div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function renderMetrics() {
@@ -932,6 +994,10 @@ function formatFreshness(isoString) {
   return `${Math.round(diffMinutes / 60)} hours ago`;
 }
 
+function formatRelativeTime(isoString) {
+  return formatFreshness(isoString);
+}
+
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -1027,6 +1093,7 @@ function bindUploadControls() {
     elements.fileMeta.textContent = file
       ? `${file.name} - ${formatFileSize(file.size)} - ready for upload`
       : "No receipt selected yet.";
+    void updatePreviewFromFile(file);
   });
 
   elements.uploadForm.addEventListener("submit", handleUpload);
@@ -1058,6 +1125,7 @@ function bindUploadControls() {
     }
 
     elements.fileMeta.textContent = `${file.name} - ${formatFileSize(file.size)} - ready for upload`;
+    void updatePreviewFromFile(file);
   });
 }
 
@@ -1109,6 +1177,8 @@ async function handleUpload(event) {
     uploadState.durationMs = Math.max(0, Date.now() - uploadState.startedAt);
     setUploadState("success", "stored", "Receipt processed and added to the console.");
     await refreshLiveSnapshot();
+    addUploadHistoryEntry(file, processedReceipt);
+    triggerSuccessBurst(elements.uploadSubmit);
   } catch (error) {
     console.error("Upload failed.", error);
     setUploadState("error", uploadState.stage || "transfer", error.message || "Upload failed.");
@@ -1216,6 +1286,218 @@ function setUploadState(phase, stage, message) {
   renderSpotlight();
 }
 
+function loadUploadHistory() {
+  try {
+    const raw = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.warn("Unable to read upload history.", error);
+    return [];
+  }
+}
+
+function persistUploadHistory() {
+  try {
+    window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(uploadHistory));
+  } catch (error) {
+    console.warn("Unable to persist upload history.", error);
+  }
+}
+
+function addUploadHistoryEntry(file, receipt) {
+  const previewType = latestPreview?.type || (guessContentType(file) === "application/pdf" ? "pdf" : "file");
+  const entry = {
+    id: receipt.receiptId || `${Date.now()}`,
+    fileName: receipt.fileName || file.name,
+    vendor: receipt.vendor || "Unknown Vendor",
+    reviewStatus: receipt.reviewStatus || "UNKNOWN",
+    totalAmount: receipt.totalAmount || "0.00",
+    currencySymbol: receipt.currencySymbol || "$",
+    processedAt: new Date().toISOString(),
+    durationMs: uploadState.durationMs || 0,
+    previewType,
+    previewDataUrl: latestPreview?.previewDataUrl || "",
+  };
+
+  uploadHistory = [entry, ...uploadHistory.filter((item) => item.id !== entry.id)].slice(
+    0,
+    MAX_HISTORY_ITEMS
+  );
+  persistUploadHistory();
+  renderUploadHistory();
+}
+
+async function updatePreviewFromFile(file) {
+  if (!elements.previewFrame || !elements.previewMeta) {
+    return;
+  }
+
+  if (!file) {
+    clearPreviewObjectUrl();
+    latestPreview = null;
+    elements.previewFrame.innerHTML = `
+      <div class="preview-empty">
+        <span class="mini-label">Preview</span>
+        <strong>Receipt preview will appear here</strong>
+        <p>Image receipts show a live thumbnail. PDFs get a document preview card with file metadata.</p>
+      </div>
+    `;
+    elements.previewMeta.innerHTML = `
+      <article class="preview-stat">
+        <span>Status</span>
+        <strong>Awaiting file</strong>
+      </article>
+      <article class="preview-stat">
+        <span>Type</span>
+        <strong>Receipt</strong>
+      </article>
+      <article class="preview-stat">
+        <span>Visibility</span>
+        <strong>Browser-side preview</strong>
+      </article>
+    `;
+    return;
+  }
+
+  latestPreview = await createPreviewPayload(file);
+
+  if (latestPreview.type === "image" && latestPreview.objectUrl) {
+    elements.previewFrame.innerHTML = `<img class="preview-image" src="${latestPreview.objectUrl}" alt="${file.name} preview" />`;
+  } else {
+    elements.previewFrame.innerHTML = `
+      <div class="preview-pdf-card">
+        <span class="mini-label">Document preview</span>
+        <strong>${file.name}</strong>
+        <p>This receipt will upload directly to S3, then Textract will read it and send the structured result back into the console.</p>
+      </div>
+    `;
+  }
+
+  elements.previewMeta.innerHTML = `
+    <article class="preview-stat">
+      <span>Status</span>
+      <strong>Ready to upload</strong>
+    </article>
+    <article class="preview-stat">
+      <span>Type</span>
+      <strong>${latestPreview.type === "image" ? "Image receipt" : "PDF receipt"}</strong>
+    </article>
+    <article class="preview-stat">
+      <span>Size</span>
+      <strong>${formatFileSize(file.size)}</strong>
+    </article>
+  `;
+}
+
+async function createPreviewPayload(file) {
+  clearPreviewObjectUrl();
+  const contentType = guessContentType(file);
+
+  if (contentType.startsWith("image/")) {
+    previewObjectUrl = URL.createObjectURL(file);
+    let previewDataUrl = "";
+    if (file.size <= 380000) {
+      previewDataUrl = await fileToDataUrl(file);
+    }
+
+    return {
+      type: "image",
+      objectUrl: previewObjectUrl,
+      previewDataUrl,
+    };
+  }
+
+  return {
+    type: "pdf",
+    objectUrl: "",
+    previewDataUrl: "",
+  };
+}
+
+function clearPreviewObjectUrl() {
+  if (previewObjectUrl) {
+    URL.revokeObjectURL(previewObjectUrl);
+    previewObjectUrl = "";
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Preview generation failed."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function bindHistoryControls() {
+  if (!elements.historyToggle || elements.historyToggle.dataset.bound === "true") {
+    return;
+  }
+
+  elements.historyToggle.dataset.bound = "true";
+  elements.historyToggle.addEventListener("click", () => {
+    document.body.classList.toggle("history-open");
+    const isOpen = document.body.classList.contains("history-open");
+    elements.historyDrawer?.setAttribute("aria-hidden", isOpen ? "false" : "true");
+    if (elements.historyScrim) {
+      elements.historyScrim.hidden = !isOpen;
+    }
+  });
+
+  elements.historyClose?.addEventListener("click", closeHistoryDrawer);
+  elements.historyScrim?.addEventListener("click", closeHistoryDrawer);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeHistoryDrawer();
+    }
+  });
+}
+
+function closeHistoryDrawer() {
+  document.body.classList.remove("history-open");
+  elements.historyDrawer?.setAttribute("aria-hidden", "true");
+  if (elements.historyScrim) {
+    elements.historyScrim.hidden = true;
+  }
+}
+
+function triggerSuccessBurst(sourceElement) {
+  if (!elements.successBurst) {
+    return;
+  }
+
+  const palette = ["#98f6ff", "#35d9ea", "#7ef0b5", "#f6c76f"];
+  const bounds = sourceElement?.getBoundingClientRect();
+  const originX = bounds ? bounds.left + bounds.width / 2 : window.innerWidth / 2;
+  const originY = bounds ? bounds.top + bounds.height / 2 : window.innerHeight / 2;
+
+  elements.successBurst.innerHTML = "";
+  for (let index = 0; index < 22; index += 1) {
+    const particle = document.createElement("span");
+    particle.className = "confetti-piece";
+    particle.style.left = `${originX}px`;
+    particle.style.top = `${originY}px`;
+    particle.style.background = palette[index % palette.length];
+    particle.style.setProperty("--burst-x", `${(Math.random() - 0.5) * 320}px`);
+    particle.style.setProperty("--burst-y", `${-120 - Math.random() * 180}px`);
+    particle.style.setProperty("--burst-rotate", `${(Math.random() - 0.5) * 720}deg`);
+    particle.style.animationDelay = `${index * 14}ms`;
+    elements.successBurst.appendChild(particle);
+  }
+
+  window.setTimeout(() => {
+    if (elements.successBurst) {
+      elements.successBurst.innerHTML = "";
+    }
+  }, 1500);
+}
+
 function initCursorFX() {
   if (!window.matchMedia("(pointer:fine)").matches) {
     return;
@@ -1258,7 +1540,10 @@ function initCursorFX() {
 }
 
 bindUploadControls();
+bindHistoryControls();
+renderUploadHistory();
 initCursorFX();
+window.addEventListener("beforeunload", clearPreviewObjectUrl);
 loadDashboard().catch((error) => {
   console.error("Unable to load dashboard.", error);
 });

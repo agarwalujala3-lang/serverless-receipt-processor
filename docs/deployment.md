@@ -125,3 +125,23 @@ GET /receipts
 - add CloudWatch alarms for Lambda errors and DLQ activity
 - add lifecycle policies to the S3 bucket
 - add a custom domain for the dashboard
+
+## Custom Domain on CloudFront
+
+The dashboard is currently being served from a CloudFront distribution. Finishing it on a branded
+domain requires the DNS name you want to use, so this part cannot be completed from code alone.
+
+Use this path when you are ready:
+
+1. Pick a hostname such as `receipts.yourdomain.com`
+2. Request an ACM certificate for that hostname in `us-east-1`
+3. Validate the certificate through Route 53 or your DNS provider
+4. Open the CloudFront distribution for the dashboard
+5. Add the hostname as an Alternate Domain Name (CNAME)
+6. Attach the ACM certificate you created in `us-east-1`
+7. In Route 53, create an Alias `A` record pointing that hostname to the CloudFront distribution
+8. If your DNS is outside Route 53, create the equivalent `CNAME` / provider-specific record
+9. Keep the distribution on HTTPS-only redirect mode
+10. Run a CloudFront invalidation after the alias is attached
+
+That leaves you with a branded, HTTPS-served product URL without changing the dashboard code.
