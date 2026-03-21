@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321f" />
+    <link rel="stylesheet" href="./styles.css?v=20260321g" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -55,7 +55,7 @@
             </p>
             <div class="hero-actions">
               <button class="primary-button" id="heroUploadTrigger" type="button">Upload Receipt</button>
-              <a class="secondary-button" href="#receiptsTable">Explore Receipts</a>
+              <button class="secondary-button" id="archiveToggle" type="button">All Receipts</button>
             </div>
           </div>
           <div class="hero-grid">
@@ -246,18 +246,28 @@
               <p class="eyebrow">Monthly Trend</p>
               <h3>Processing throughput over time</h3>
             </div>
+            <select class="month-select" id="expenseMonthSelect" aria-label="Expense month selector"></select>
           </div>
-          <div id="trendBars" class="trend-bars"></div>
+          <div class="trend-shell">
+            <div id="trendBars" class="trend-bars"></div>
+            <div class="expense-donut-shell">
+              <div class="expense-donut" id="expenseDonut"></div>
+              <div class="expense-legend" id="expenseLegend"></div>
+            </div>
+          </div>
         </article>
       </section>
 
-      <section class="panel table-panel" id="receiptsTable">
+      <section class="panel table-panel archive-collapsed" id="receiptsTable">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Stored Receipt Archive</p>
             <h3>Searchable historical receipt intelligence</h3>
           </div>
-          <div class="filter-row" id="filterRow"></div>
+          <div class="archive-actions">
+            <div class="filter-row" id="filterRow"></div>
+            <button class="ghost-link ghost-button" id="archiveClose" type="button">Hide Archive</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -285,7 +295,10 @@
           <p class="eyebrow">Recent Uploads</p>
           <h3>Receipt intake history</h3>
         </div>
-        <button class="ghost-link ghost-button" id="historyClose" type="button">Close</button>
+        <div class="history-head-actions">
+          <button class="ghost-link ghost-button" id="historyClear" type="button">Clear History</button>
+          <button class="ghost-link ghost-button" id="historyClose" type="button">Close</button>
+        </div>
       </div>
       <p class="history-copy">
         This panel keeps the most recent browser-side uploads so a recruiter or reviewer can see
@@ -296,7 +309,7 @@
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260321f"></script>
-    <script src="./app.js?v=20260321f" defer></script>
+    <script src="./config.js?v=20260321g"></script>
+    <script src="./app.js?v=20260321g" defer></script>
   </body>
 </html>

@@ -261,6 +261,9 @@ const elements = {
   workflowTrack: document.querySelector("#workflowTrack"),
   queueList: document.querySelector("#queueList"),
   trendBars: document.querySelector("#trendBars"),
+  expenseMonthSelect: document.querySelector("#expenseMonthSelect"),
+  expenseDonut: document.querySelector("#expenseDonut"),
+  expenseLegend: document.querySelector("#expenseLegend"),
   receiptsBody: document.querySelector("#receiptsBody"),
   filterRow: document.querySelector("#filterRow"),
   modeBadge: document.querySelector("#modeBadge"),
@@ -271,8 +274,12 @@ const elements = {
   spotlightTitle: document.querySelector("#spotlightTitle"),
   spotlightNarrative: document.querySelector("#spotlightNarrative"),
   spotlightFacts: document.querySelector("#spotlightFacts"),
+  spotlightPanel: document.querySelector(".spotlight-panel"),
   flipGrid: document.querySelector("#flipGrid"),
   heroUploadTrigger: document.querySelector("#heroUploadTrigger"),
+  archiveToggle: document.querySelector("#archiveToggle"),
+  archiveClose: document.querySelector("#archiveClose"),
+  archivePanel: document.querySelector("#receiptsTable"),
   uploadForm: document.querySelector("#uploadForm"),
   fileInput: document.querySelector("#fileInput"),
   dropzone: document.querySelector("#dropzone"),
@@ -286,6 +293,7 @@ const elements = {
   uploadMessage: document.querySelector("#uploadMessage"),
   historyToggle: document.querySelector("#historyToggle"),
   historyClose: document.querySelector("#historyClose"),
+  historyClear: document.querySelector("#historyClear"),
   historyDrawer: document.querySelector("#historyDrawer"),
   historyList: document.querySelector("#historyList"),
   historyScrim: document.querySelector("#historyScrim"),
@@ -298,6 +306,8 @@ let apiBase = "";
 let uploadHistory = loadUploadHistory();
 let previewObjectUrl = "";
 let latestPreview = null;
+let archiveOpen = false;
+let selectedExpenseMonth = "";
 let uploadState = {
   phase: "idle",
   stage: "slot",
@@ -446,6 +456,7 @@ function renderDashboard() {
   renderTrend();
   renderFilters();
   renderReceipts();
+  setArchiveVisibility(archiveOpen);
   elements.riskHeadline.textContent = dashboardData.heroHeadline;
   bindInteractiveFX();
 }
@@ -605,19 +616,19 @@ function renderFlipCards() {
 
   elements.flipGrid.innerHTML = HOW_IT_WORKS.map(
     (card) => `
-      <button class="flip-card" type="button">
+      <button class="flip-card" type="button" aria-pressed="false">
         <span class="flip-card-inner">
           <span class="flip-card-face flip-card-front">
             <span class="mini-label">${card.eyebrow}</span>
             <strong>${card.frontTitle}</strong>
             <p>${card.frontBody}</p>
-            <span class="flip-cta">Click to flip</span>
+            <span class="flip-cta">Open details</span>
           </span>
           <span class="flip-card-face flip-card-back">
             <span class="mini-label">${card.eyebrow}</span>
             <strong>${card.backTitle}</strong>
             <p>${card.backBody}</p>
-            <span class="flip-cta">Tap again to return</span>
+            <span class="flip-cta">Return to overview</span>
           </span>
         </span>
       </button>
@@ -625,12 +636,14 @@ function renderFlipCards() {
   ).join("");
 
   elements.flipGrid.querySelectorAll(".flip-card").forEach((card) => {
-    if (card.dataset.bound === "true") {
-      return;
-    }
-    card.dataset.bound = "true";
     card.addEventListener("click", () => {
-      card.classList.toggle("is-flipped");
+      const shouldFlip = !card.classList.contains("is-flipped");
+      elements.flipGrid.querySelectorAll(".flip-card").forEach((peer) => {
+        peer.classList.remove("is-flipped");
+        peer.setAttribute("aria-pressed", "false");
+      });
+      card.classList.toggle("is-flipped", shouldFlip);
+      card.setAttribute("aria-pressed", shouldFlip ? "true" : "false");
     });
   });
 }
@@ -642,6 +655,12 @@ function renderUploadHistory() {
 
   if (elements.historyToggle) {
     elements.historyToggle.textContent = `Upload History (${uploadHistory.length})`;
+  }
+  if (elements.historyClear) {
+    elements.historyClear.disabled = uploadHistory.length === 0;
+    elements.historyClear.textContent = uploadHistory.length
+      ? `Clear History (${uploadHistory.length})`
+      : "Clear History";
   }
 
   if (!uploadHistory.length) {
@@ -828,19 +847,62 @@ function renderQueue() {
 }
 
 function renderTrend() {
+  if (!elements.trendBars || !elements.expenseMonthSelect || !elements.expenseDonut || !elements.expenseLegend) {
+    return;
+  }
+
   if (!dashboardData.monthlyTrend.length) {
     elements.trendBars.innerHTML =
       '<p class="muted">Monthly throughput appears once receipts reach storage.</p>';
+    elements.expenseMonthSelect.innerHTML = '<option value="">No months yet</option>';
+    elements.expenseMonthSelect.disabled = true;
+    elements.expenseDonut.classList.add("expense-donut-empty");
+    elements.expenseDonut.style.background = "";
+    elements.expenseDonut.innerHTML = `
+      <div class="expense-donut-center">
+        <span>Month view</span>
+        <strong>Awaiting data</strong>
+      </div>
+    `;
+    elements.expenseLegend.innerHTML =
+      '<p class="muted expense-empty-note">Process receipts to unlock spend-by-category view.</p>';
     return;
   }
+
+  const availableMonths = Array.from(
+    new Set(
+      (dashboardData.receipts || [])
+        .map((receipt) => receipt.expenseMonth)
+        .filter((month) => month && month !== "--")
+    )
+  ).sort((left, right) => right.localeCompare(left));
+
+  if (!selectedExpenseMonth || (selectedExpenseMonth !== "__all" && !availableMonths.includes(selectedExpenseMonth))) {
+    selectedExpenseMonth = availableMonths[0] || "__all";
+  }
+
+  const monthOptions = [
+    { value: "__all", label: "All Months" },
+    ...availableMonths.map((month) => ({ value: month, label: formatMonthLabel(month) })),
+  ];
+  elements.expenseMonthSelect.disabled = monthOptions.length === 1;
+  elements.expenseMonthSelect.innerHTML = monthOptions
+    .map(
+      (option) => `
+        <option value="${option.value}" ${option.value === selectedExpenseMonth ? "selected" : ""}>
+          ${option.label}
+        </option>
+      `
+    )
+    .join("");
 
   const maxAmount = Math.max(...dashboardData.monthlyTrend.map((item) => item.amount), 1);
   elements.trendBars.innerHTML = dashboardData.monthlyTrend
     .map(
       (item) => `
-        <div class="trend-bar">
+        <div class="trend-bar ${item.month === selectedExpenseMonth ? "trend-bar-active" : ""}">
           <div class="trend-meta">
-            <strong>${item.month}</strong>
+            <strong>${formatMonthLabel(item.month)}</strong>
             <span class="muted">$${Number(item.amount).toFixed(2)} - ${item.count} receipts</span>
           </div>
           <div class="trend-track">
@@ -850,6 +912,8 @@ function renderTrend() {
       `
     )
     .join("");
+
+  renderExpenseDonut();
 }
 
 function renderFilters() {
@@ -1183,6 +1247,7 @@ async function handleUpload(event) {
     await refreshLiveSnapshot();
     addUploadHistoryEntry(file, processedReceipt);
     triggerSuccessBurst(elements.uploadSubmit);
+    scrollToProcessedResult();
   } catch (error) {
     console.error("Upload failed.", error);
     setUploadState("error", uploadState.stage || "transfer", error.message || "Upload failed.");
@@ -1455,6 +1520,7 @@ function bindHistoryControls() {
   });
 
   elements.historyClose?.addEventListener("click", closeHistoryDrawer);
+  elements.historyClear?.addEventListener("click", clearUploadHistory);
   elements.historyScrim?.addEventListener("click", closeHistoryDrawer);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -1469,6 +1535,147 @@ function closeHistoryDrawer() {
   if (elements.historyScrim) {
     elements.historyScrim.hidden = true;
   }
+}
+
+function clearUploadHistory() {
+  if (!uploadHistory.length) {
+    return;
+  }
+
+  const shouldClear = window.confirm(
+    "Clear the browser-side upload history? This only removes local preview history from this browser."
+  );
+  if (!shouldClear) {
+    return;
+  }
+
+  uploadHistory = [];
+  persistUploadHistory();
+  renderUploadHistory();
+}
+
+function bindArchiveControls() {
+  if (elements.archiveToggle && elements.archiveToggle.dataset.bound !== "true") {
+    elements.archiveToggle.dataset.bound = "true";
+    elements.archiveToggle.addEventListener("click", () => {
+      setArchiveVisibility(!archiveOpen, true);
+    });
+  }
+
+  if (elements.archiveClose && elements.archiveClose.dataset.bound !== "true") {
+    elements.archiveClose.dataset.bound = "true";
+    elements.archiveClose.addEventListener("click", () => {
+      setArchiveVisibility(false);
+    });
+  }
+
+  if (elements.expenseMonthSelect && elements.expenseMonthSelect.dataset.bound !== "true") {
+    elements.expenseMonthSelect.dataset.bound = "true";
+    elements.expenseMonthSelect.addEventListener("change", (event) => {
+      selectedExpenseMonth = event.target.value;
+      renderTrend();
+    });
+  }
+}
+
+function setArchiveVisibility(isOpen, scrollIntoView = false) {
+  archiveOpen = Boolean(isOpen);
+  if (!elements.archivePanel) {
+    return;
+  }
+
+  elements.archivePanel.classList.toggle("archive-collapsed", !archiveOpen);
+  elements.archivePanel.setAttribute("aria-expanded", archiveOpen ? "true" : "false");
+
+  if (elements.archiveToggle) {
+    elements.archiveToggle.textContent = archiveOpen ? "Hide Receipts" : "All Receipts";
+    elements.archiveToggle.setAttribute("aria-expanded", archiveOpen ? "true" : "false");
+  }
+
+  if (archiveOpen && scrollIntoView) {
+    elements.archivePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function renderExpenseDonut() {
+  const visibleReceipts = (dashboardData.receipts || []).filter((receipt) => {
+    if (selectedExpenseMonth === "__all") {
+      return true;
+    }
+    return receipt.expenseMonth === selectedExpenseMonth;
+  });
+
+  if (!visibleReceipts.length) {
+    elements.expenseDonut.classList.add("expense-donut-empty");
+    elements.expenseDonut.style.background = "";
+    elements.expenseDonut.innerHTML = `
+      <div class="expense-donut-center">
+        <span>Month view</span>
+        <strong>No spend</strong>
+      </div>
+    `;
+    elements.expenseLegend.innerHTML =
+      '<p class="muted expense-empty-note">No receipts were processed in this month yet.</p>';
+    return;
+  }
+
+  const categoryTotals = new Map();
+  visibleReceipts.forEach((receipt) => {
+    const category = receipt.category || "Uncategorized";
+    const amount = Number(receipt.totalAmount || 0);
+    categoryTotals.set(category, (categoryTotals.get(category) || 0) + amount);
+  });
+
+  const slices = Array.from(categoryTotals.entries())
+    .map(([label, amount]) => ({ label, amount }))
+    .sort((left, right) => right.amount - left.amount);
+  const palette = ["#98f6ff", "#35d9ea", "#7ef0b5", "#f6c76f", "#ff9f71", "#9a8bff"];
+  const totalAmount = slices.reduce((sum, item) => sum + item.amount, 0) || 1;
+
+  let currentStop = 0;
+  const gradientStops = slices
+    .map((slice, index) => {
+      const ratio = (slice.amount / totalAmount) * 100;
+      const start = currentStop;
+      currentStop += ratio;
+      slice.share = ratio;
+      slice.color = palette[index % palette.length];
+      return `${slice.color} ${start.toFixed(2)}% ${currentStop.toFixed(2)}%`;
+    })
+    .join(", ");
+
+  elements.expenseDonut.classList.remove("expense-donut-empty");
+  elements.expenseDonut.style.background = `conic-gradient(${gradientStops})`;
+  elements.expenseDonut.innerHTML = `
+    <div class="expense-donut-center">
+      <span>${selectedExpenseMonth === "__all" ? "All months" : formatMonthLabel(selectedExpenseMonth)}</span>
+      <strong>$${totalAmount.toFixed(2)}</strong>
+      <small>${visibleReceipts.length} receipt${visibleReceipts.length === 1 ? "" : "s"}</small>
+    </div>
+  `;
+
+  elements.expenseLegend.innerHTML = slices
+    .map(
+      (slice) => `
+        <article class="legend-row">
+          <div class="legend-copy">
+            <span class="legend-swatch" style="background:${slice.color}"></span>
+            <strong>${slice.label}</strong>
+          </div>
+          <div class="legend-values">
+            <span>$${slice.amount.toFixed(2)}</span>
+            <span class="muted">${slice.share.toFixed(1)}%</span>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function scrollToProcessedResult() {
+  window.requestAnimationFrame(() => {
+    elements.spotlightPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function triggerSuccessBurst(sourceElement) {
@@ -1543,9 +1750,29 @@ function initCursorFX() {
   requestAnimationFrame(tick);
 }
 
+function formatMonthLabel(value) {
+  if (!value || value === "__all") {
+    return "All Months";
+  }
+
+  const [year, month] = String(value).split("-");
+  const monthIndex = Number(month) - 1;
+  if (!year || Number.isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
+    return value;
+  }
+
+  return new Date(Date.UTC(Number(year), monthIndex, 1)).toLocaleDateString(undefined, {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 bindUploadControls();
 bindHistoryControls();
+bindArchiveControls();
 renderUploadHistory();
+setArchiveVisibility(false);
 initCursorFX();
 window.addEventListener("beforeunload", clearPreviewObjectUrl);
 loadDashboard().catch((error) => {
