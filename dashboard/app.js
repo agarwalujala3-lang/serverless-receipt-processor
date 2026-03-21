@@ -300,7 +300,7 @@ let latestPreview = null;
 let uploadState = {
   phase: "idle",
   stage: "slot",
-  message: "Select a receipt and trigger the pipeline.",
+  message: "Choose a receipt from your device to start a new upload.",
   objectKey: "",
   receipt: null,
   startedAt: 0,
@@ -559,19 +559,17 @@ function renderSpotlight() {
     return;
   }
 
-  const receipt = uploadState.receipt || dashboardData.receipts[0];
+  const receipt = uploadState.receipt;
   if (!receipt) {
-    elements.spotlightKicker.textContent = "Latest extraction";
-    elements.spotlightTitle.textContent = "Waiting for a processed receipt.";
+    elements.spotlightKicker.textContent = "Current upload";
+    elements.spotlightTitle.textContent = "No receipt from this browser session yet.";
     elements.spotlightNarrative.textContent =
-      "Upload a receipt to watch the extracted result and routing decision appear here.";
+      "Select a file from your device, upload it to S3, and this area will switch from an empty state to your own live processing result.";
     elements.spotlightFacts.innerHTML = "";
     return;
   }
 
-  elements.spotlightKicker.textContent = uploadState.receipt
-    ? "Freshly processed upload"
-    : "Most recent live receipt";
+  elements.spotlightKicker.textContent = "Freshly processed upload";
   elements.spotlightTitle.textContent = `${receipt.vendor} - ${formatLabel(receipt.reviewStatus)}`;
   elements.spotlightNarrative.textContent = buildSpotlightNarrative(receipt);
 

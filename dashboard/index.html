@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321d" />
+    <link rel="stylesheet" href="./styles.css?v=20260321e" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -22,7 +22,8 @@
         <p class="eyebrow">ReceiptPulse Console</p>
         <h1>Live serverless expense operations.</h1>
         <p class="topbar-text">
-          Uploads, OCR extraction, review routing, analytics, and exports in one finance-facing console.
+          Upload the receipt you choose from your own device, send it to S3, and watch the live
+          processing result appear before it joins the stored archive.
         </p>
       </div>
       <div class="topbar-actions">
@@ -146,7 +147,7 @@
               <button class="primary-button upload-submit" id="uploadSubmit" type="submit">
                 Upload And Process
               </button>
-              <span class="upload-helper">Presigned upload, AI extraction, duplicate check, and review routing.</span>
+              <span class="upload-helper">This uses the exact file you choose here, uploads it to S3, then runs extraction, duplicate checks, and review routing.</span>
             </div>
           </form>
 
@@ -166,16 +167,17 @@
         <article class="panel spotlight-panel">
           <div class="section-heading section-heading-tight">
             <div>
-              <p class="eyebrow">Latest Extraction</p>
-              <h3>Receipt spotlight</h3>
+              <p class="eyebrow">Your Current Upload</p>
+              <h3>Current upload result</h3>
             </div>
           </div>
           <div class="spotlight-shell">
             <div class="spotlight-copy">
-              <p class="spotlight-kicker" id="spotlightKicker">Most recent receipt</p>
-              <h3 class="spotlight-title" id="spotlightTitle">Waiting for a processed receipt.</h3>
+              <p class="spotlight-kicker" id="spotlightKicker">Current upload</p>
+              <h3 class="spotlight-title" id="spotlightTitle">No receipt from this browser session yet.</h3>
               <p class="spotlight-narrative" id="spotlightNarrative">
-                Upload a receipt to watch the extraction summary, quality score, and routing decision appear here.
+                Pick a receipt from your device and this area will show that exact file's extraction
+                summary, quality score, and routing decision after processing finishes.
               </p>
             </div>
             <div class="spotlight-facts" id="spotlightFacts"></div>
@@ -252,8 +254,8 @@
       <section class="panel table-panel" id="receiptsTable">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Receipts</p>
-            <h3>Searchable receipt intelligence layer</h3>
+            <p class="eyebrow">Stored Receipt Archive</p>
+            <h3>Searchable historical receipt intelligence</h3>
           </div>
           <div class="filter-row" id="filterRow"></div>
         </div>
@@ -294,7 +296,7 @@
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260321d"></script>
-    <script src="./app.js?v=20260321d" defer></script>
+    <script src="./config.js?v=20260321e"></script>
+    <script src="./app.js?v=20260321e" defer></script>
   </body>
 </html>
