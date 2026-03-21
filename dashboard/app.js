@@ -272,6 +272,7 @@ const elements = {
   spotlightNarrative: document.querySelector("#spotlightNarrative"),
   spotlightFacts: document.querySelector("#spotlightFacts"),
   flipGrid: document.querySelector("#flipGrid"),
+  heroUploadTrigger: document.querySelector("#heroUploadTrigger"),
   uploadForm: document.querySelector("#uploadForm"),
   fileInput: document.querySelector("#fileInput"),
   dropzone: document.querySelector("#dropzone"),
@@ -1085,6 +1086,11 @@ function bindUploadControls() {
   }
 
   elements.uploadForm.dataset.bound = "true";
+
+  elements.heroUploadTrigger?.addEventListener("click", () => {
+    document.querySelector("#uploadLab")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    elements.fileInput?.click();
+  });
 
   elements.fileInput.addEventListener("change", () => {
     const file = elements.fileInput.files[0] || null;
