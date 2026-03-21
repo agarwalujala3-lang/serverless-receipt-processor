@@ -46,6 +46,7 @@ def lambda_handler(event, context):
                         "/health",
                         "/snapshot",
                         "/receipts",
+                        "/receipts/clear",
                         "/analytics",
                         "/uploads",
                         "/uploads/status",
@@ -72,6 +73,10 @@ def lambda_handler(event, context):
             return response(200, analytics)
         if method == "GET" and path == "/snapshot":
             return response(200, get_snapshot_payload())
+        if method == "POST" and path == "/receipts/clear":
+            body = json.loads(event.get("body") or "{}")
+            deleted = clear_receipts(body)
+            return response(200, deleted)
         if method == "GET" and path == "/exports/csv":
             csv_text = export_csv(get_snapshot_payload()["receipts"])
             return response(200, csv_text, content_type="text/csv")
@@ -374,6 +379,48 @@ def update_review_status(receipt_id, payload):
     return {"receipt": response.get("Attributes", {})}
 
 
+def clear_receipts(payload):
+    from_date = payload.get("fromDate") or ""
+    to_date = payload.get("toDate") or ""
+    matching_receipts = [
+        receipt
+        for receipt in scan_receipts()
+        if receipt_matches_range(receipt, from_date, to_date)
+    ]
+
+    if not matching_receipts:
+        return {
+            "deletedCount": 0,
+            "deletedS3Objects": 0,
+            "fromDate": from_date or None,
+            "toDate": to_date or None,
+            "message": "No stored receipts matched the selected time period.",
+        }
+
+    table = dynamodb.Table(RECEIPT_TABLE)
+    deleted_objects = 0
+
+    with table.batch_writer() as batch:
+        for receipt in matching_receipts:
+            batch.delete_item(Key={"receipt_id": receipt["receipt_id"]})
+            key = receipt.get("key")
+            if RECEIPT_BUCKET and key:
+                try:
+                    s3.delete_object(Bucket=RECEIPT_BUCKET, Key=key)
+                    deleted_objects += 1
+                except ClientError:
+                    pass
+
+    invalidate_snapshot_cache()
+    return {
+        "deletedCount": len(matching_receipts),
+        "deletedS3Objects": deleted_objects,
+        "fromDate": from_date or None,
+        "toDate": to_date or None,
+        "message": f"Deleted {len(matching_receipts)} stored receipts for the selected period.",
+    }
+
+
 def invalidate_snapshot_cache():
     _SNAPSHOT_CACHE["payload"] = None
     _SNAPSHOT_CACHE["expires_at"] = 0.0
@@ -425,6 +472,46 @@ def sanitize_filename(value):
     basename = os.path.basename(str(value).strip())
     sanitized = re.sub(r"[^A-Za-z0-9._-]+", "-", basename).strip(".-")
     return sanitized or "receipt-upload"
+
+
+def receipt_matches_range(receipt, from_date, to_date):
+    stamp = parse_receipt_timestamp(receipt)
+    if stamp is None:
+        return not from_date and not to_date
+
+    if from_date:
+        start = datetime.fromisoformat(f"{from_date}T00:00:00+00:00")
+        if stamp < start:
+            return False
+
+    if to_date:
+        end = datetime.fromisoformat(f"{to_date}T23:59:59.999999+00:00")
+        if stamp > end:
+            return False
+
+    return True
+
+
+def parse_receipt_timestamp(receipt):
+    candidates = [
+        receipt.get("processed_timestamp"),
+        receipt.get("created_at"),
+        receipt.get("date"),
+    ]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        if len(candidate) == 10:
+            candidate = f"{candidate}T00:00:00+00:00"
+        normalized = str(candidate).replace("Z", "+00:00")
+        try:
+            stamp = datetime.fromisoformat(normalized)
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            return stamp.astimezone(timezone.utc)
+        except ValueError:
+            continue
+    return None
 
 
 def response(status_code, payload, content_type="application/json"):

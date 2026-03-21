@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321g" />
+    <link rel="stylesheet" href="./styles.css?v=20260321h" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -296,7 +296,7 @@
           <h3>Receipt intake history</h3>
         </div>
         <div class="history-head-actions">
-          <button class="ghost-link ghost-button" id="historyClear" type="button">Clear History</button>
+          <button class="ghost-link ghost-button" id="historyDelete" type="button">Delete Period Data</button>
           <button class="ghost-link ghost-button" id="historyClose" type="button">Close</button>
         </div>
       </div>
@@ -304,12 +304,32 @@
         This panel keeps the most recent browser-side uploads so a recruiter or reviewer can see
         the system behaving like a product, not a static demo.
       </p>
+      <div class="history-range-shell">
+        <label class="field history-field">
+          <span>From</span>
+          <input class="text-input" id="historyRangeStart" type="date" />
+        </label>
+        <label class="field history-field">
+          <span>To</span>
+          <input class="text-input" id="historyRangeEnd" type="date" />
+        </label>
+      </div>
+      <p class="history-note">
+        Delete stored receipts by date range to remove them from the archive, review queue, totals,
+        and charts. Leave both dates empty to wipe all stored receipt data.
+      </p>
+      <div class="history-toolbar">
+        <button class="primary-button history-delete-button" id="historyDeleteAction" type="button">
+          Delete Stored Receipts
+        </button>
+        <button class="ghost-link ghost-button" id="historyClearLocal" type="button">Clear Local Only</button>
+      </div>
       <div class="history-list" id="historyList"></div>
     </aside>
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260321g"></script>
-    <script src="./app.js?v=20260321g" defer></script>
+    <script src="./config.js?v=20260321h"></script>
+    <script src="./app.js?v=20260321h" defer></script>
   </body>
 </html>

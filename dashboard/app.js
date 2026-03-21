@@ -293,7 +293,11 @@ const elements = {
   uploadMessage: document.querySelector("#uploadMessage"),
   historyToggle: document.querySelector("#historyToggle"),
   historyClose: document.querySelector("#historyClose"),
-  historyClear: document.querySelector("#historyClear"),
+  historyDelete: document.querySelector("#historyDelete"),
+  historyDeleteAction: document.querySelector("#historyDeleteAction"),
+  historyClearLocal: document.querySelector("#historyClearLocal"),
+  historyRangeStart: document.querySelector("#historyRangeStart"),
+  historyRangeEnd: document.querySelector("#historyRangeEnd"),
   historyDrawer: document.querySelector("#historyDrawer"),
   historyList: document.querySelector("#historyList"),
   historyScrim: document.querySelector("#historyScrim"),
@@ -370,6 +374,7 @@ function mapReceipt(receipt) {
     itemCount: Number(receipt.itemCount || receipt.item_count || 0),
     duplicateOf: receipt.duplicateOf || receipt.duplicate_of || "",
     reviewReasons: receipt.reviewReasons || receipt.review_reasons || [],
+    processedAt: receipt.processedAt || receipt.processed_timestamp || "",
   };
 }
 
@@ -656,11 +661,17 @@ function renderUploadHistory() {
   if (elements.historyToggle) {
     elements.historyToggle.textContent = `Upload History (${uploadHistory.length})`;
   }
-  if (elements.historyClear) {
-    elements.historyClear.disabled = uploadHistory.length === 0;
-    elements.historyClear.textContent = uploadHistory.length
-      ? `Clear History (${uploadHistory.length})`
-      : "Clear History";
+  if (elements.historyDelete) {
+    elements.historyDelete.disabled = !dashboardData?.receipts?.length;
+  }
+  if (elements.historyDeleteAction) {
+    elements.historyDeleteAction.disabled = !dashboardData?.receipts?.length;
+  }
+  if (elements.historyClearLocal) {
+    elements.historyClearLocal.disabled = uploadHistory.length === 0;
+    elements.historyClearLocal.textContent = uploadHistory.length
+      ? `Clear Local Only (${uploadHistory.length})`
+      : "Clear Local Only";
   }
 
   if (!uploadHistory.length) {
@@ -1337,6 +1348,9 @@ async function refreshLiveSnapshot() {
     );
     if (matched) {
       uploadState.receipt = matched;
+    } else {
+      uploadState.receipt = null;
+      uploadState.durationMs = null;
     }
   }
 
@@ -1520,7 +1534,11 @@ function bindHistoryControls() {
   });
 
   elements.historyClose?.addEventListener("click", closeHistoryDrawer);
-  elements.historyClear?.addEventListener("click", clearUploadHistory);
+  elements.historyDelete?.addEventListener("click", () => {
+    elements.historyDeleteAction?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  elements.historyDeleteAction?.addEventListener("click", clearStoredReceiptData);
+  elements.historyClearLocal?.addEventListener("click", clearUploadHistory);
   elements.historyScrim?.addEventListener("click", closeHistoryDrawer);
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -1552,6 +1570,117 @@ function clearUploadHistory() {
   uploadHistory = [];
   persistUploadHistory();
   renderUploadHistory();
+}
+
+async function clearStoredReceiptData() {
+  if (!apiBase) {
+    return;
+  }
+
+  const fromDate = elements.historyRangeStart?.value || "";
+  const toDate = elements.historyRangeEnd?.value || "";
+
+  if (fromDate && toDate && fromDate > toDate) {
+    window.alert("Choose a valid date range. The start date must be before the end date.");
+    return;
+  }
+
+  const rangeLabel = buildRangeLabel(fromDate, toDate);
+  const shouldDelete = window.confirm(
+    `Delete stored receipts for ${rangeLabel}? This will remove matching receipts from the archive, charts, totals, and review queue.`
+  );
+  if (!shouldDelete) {
+    return;
+  }
+
+  try {
+    toggleStoredDeleteBusy(true);
+    const response = await fetch(`${apiBase.replace(/\/$/, "")}/receipts/clear`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromDate, toDate }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Unable to delete stored receipts (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    pruneLocalHistoryByRange(fromDate, toDate);
+    if (uploadState.receipt && matchesDateRange(uploadState.receipt.processedAt, fromDate, toDate)) {
+      uploadState.receipt = null;
+      uploadState.durationMs = null;
+      setUploadState("idle", "slot", "Stored receipts were deleted for the selected period.");
+    }
+    await refreshLiveSnapshot();
+    renderUploadHistory();
+    elements.statusNote.textContent = payload.message || "Stored receipts deleted.";
+    closeHistoryDrawer();
+  } catch (error) {
+    console.error("Stored receipt deletion failed.", error);
+    window.alert(error.message || "Stored receipt deletion failed.");
+  } finally {
+    toggleStoredDeleteBusy(false);
+  }
+}
+
+function pruneLocalHistoryByRange(fromDate, toDate) {
+  uploadHistory = uploadHistory.filter(
+    (entry) => !matchesDateRange(entry.processedAt, fromDate, toDate)
+  );
+  persistUploadHistory();
+}
+
+function matchesDateRange(isoString, fromDate, toDate) {
+  if (!isoString) {
+    return !fromDate && !toDate;
+  }
+
+  const stamp = new Date(isoString);
+  if (Number.isNaN(stamp.getTime())) {
+    return false;
+  }
+
+  if (fromDate) {
+    const start = new Date(`${fromDate}T00:00:00`);
+    if (stamp < start) {
+      return false;
+    }
+  }
+
+  if (toDate) {
+    const end = new Date(`${toDate}T23:59:59.999`);
+    if (stamp > end) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function buildRangeLabel(fromDate, toDate) {
+  if (fromDate && toDate) {
+    return `${fromDate} to ${toDate}`;
+  }
+  if (fromDate) {
+    return `${fromDate} onward`;
+  }
+  if (toDate) {
+    return `everything up to ${toDate}`;
+  }
+  return "all time";
+}
+
+function toggleStoredDeleteBusy(isBusy) {
+  if (elements.historyDeleteAction) {
+    elements.historyDeleteAction.disabled = isBusy;
+    elements.historyDeleteAction.textContent = isBusy
+      ? "Deleting Stored Receipts..."
+      : "Delete Stored Receipts";
+  }
+  if (elements.historyDelete) {
+    elements.historyDelete.disabled = isBusy || !dashboardData?.receipts?.length;
+  }
 }
 
 function bindArchiveControls() {
