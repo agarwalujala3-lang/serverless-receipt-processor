@@ -126,6 +126,26 @@ const FUN_FALLBACK_SWATCHES = [
   { icon: "💜", color: "#b48fff", soft: "rgba(180, 143, 255, 0.18)", ring: "rgba(180, 143, 255, 0.42)" },
   { icon: "🪄", color: "#6ee7b7", soft: "rgba(110, 231, 183, 0.18)", ring: "rgba(110, 231, 183, 0.42)" },
 ];
+const SAFE_THEME_ICONS = {
+  receipt: "\u{1F9FE}",
+  food: "\u{1F35C}",
+  shopping: "\u{1F6CD}\u{FE0F}",
+  travel: "\u{2708}\u{FE0F}",
+  electricity: "\u{26A1}",
+  groceries: "\u{1F6D2}",
+  medical: "\u{1FA7A}",
+  fuel: "\u{26FD}",
+  entertainment: "\u{1F389}",
+  home: "\u{1F3E0}",
+  subscription: "\u{1F4F1}",
+};
+const SAFE_FALLBACK_ICONS = [
+  "\u{1F308}",
+  "\u{2728}",
+  "\u{1F388}",
+  "\u{1F49C}",
+  "\u{1FA84}",
+];
 const IGNORED_LABELS = new Set(["", "finance desk", "receiptpulse", "ops"]);
 const FALLBACK_DASHBOARD = {
   summary: {
@@ -381,6 +401,13 @@ const elements = {
   uploadSubmit: document.querySelector("#uploadSubmit"),
   uploadTimeline: document.querySelector("#uploadTimeline"),
   uploadMessage: document.querySelector("#uploadMessage"),
+  uploadMotionScene: document.querySelector("#uploadMotionScene"),
+  uploadMotionReceipt: document.querySelector("#uploadMotionReceipt"),
+  uploadMotionIcon: document.querySelector("#uploadMotionIcon"),
+  uploadMotionLabel: document.querySelector("#uploadMotionLabel"),
+  uploadMotionDetail: document.querySelector("#uploadMotionDetail"),
+  uploadMotionStage: document.querySelector("#uploadMotionStage"),
+  uploadMotionStageCopy: document.querySelector("#uploadMotionStageCopy"),
   historyToggle: document.querySelector("#historyToggle"),
   historyClose: document.querySelector("#historyClose"),
   historyDelete: document.querySelector("#historyDelete"),
@@ -402,13 +429,17 @@ let previewObjectUrl = "";
 let latestPreview = null;
 let archiveOpen = false;
 let selectedExpenseMonth = "";
+let donutRefreshTimer = 0;
+let panelRefreshTimer = 0;
+let pendingVisualRefresh = null;
 let uploadState = {
   phase: "idle",
   stage: "slot",
-  message: "Choose a receipt from your device to start a colorful new upload.",
+  message: "Choose a receipt from your device to start a new upload.",
   objectKey: "",
   receipt: null,
   customLabel: "",
+  fileName: "",
   startedAt: 0,
   durationMs: null,
 };
@@ -506,14 +537,41 @@ function getReceiptLabelOverride(receipt) {
 }
 
 function buildFallbackTheme(label) {
-  const swatch = FUN_FALLBACK_SWATCHES[hashString(label) % FUN_FALLBACK_SWATCHES.length];
+  const index = hashString(label) % FUN_FALLBACK_SWATCHES.length;
+  const swatch = FUN_FALLBACK_SWATCHES[index];
   return {
-    key: `custom-${hashString(label) % FUN_FALLBACK_SWATCHES.length}`,
-    icon: swatch.icon,
+    key: `custom-${index}`,
+    icon: SAFE_FALLBACK_ICONS[index] || swatch.icon,
     color: swatch.color,
     soft: swatch.soft,
     ring: swatch.ring,
   };
+}
+
+function applySafeThemeIcon(theme) {
+  if (!theme) {
+    return {
+      key: "receipt",
+      icon: SAFE_THEME_ICONS.receipt,
+      color: "#7de7ff",
+      soft: "rgba(125, 231, 255, 0.18)",
+      ring: "rgba(125, 231, 255, 0.42)",
+    };
+  }
+
+  if (SAFE_THEME_ICONS[theme.key]) {
+    return { ...theme, icon: SAFE_THEME_ICONS[theme.key] };
+  }
+
+  if (theme.key?.startsWith("custom-")) {
+    const customIndex = Number(theme.key.split("-")[1]) || 0;
+    return {
+      ...theme,
+      icon: SAFE_FALLBACK_ICONS[customIndex % SAFE_FALLBACK_ICONS.length] || theme.icon,
+    };
+  }
+
+  return theme;
 }
 
 function getVisualTheme(source) {
@@ -533,10 +591,10 @@ function getVisualTheme(source) {
   );
 
   if (preset) {
-    return preset;
+    return applySafeThemeIcon(preset);
   }
 
-  return buildFallbackTheme(normalized);
+  return applySafeThemeIcon(buildFallbackTheme(normalized));
 }
 
 function getReceiptDisplayLabel(receipt) {
@@ -662,6 +720,7 @@ function renderDashboard() {
   renderReceipts();
   setArchiveVisibility(archiveOpen);
   elements.riskHeadline.textContent = dashboardData.heroHeadline;
+  syncUploadMotion();
   bindInteractiveFX();
 }
 
@@ -766,8 +825,121 @@ function renderUploadTimeline() {
   if (elements.uploadSubmit) {
     const busy = ["preparing", "uploading", "processing"].includes(uploadState.phase);
     elements.uploadSubmit.disabled = busy;
-    elements.uploadSubmit.textContent = busy ? "Processing Receipt..." : "Upload And Process";
+    elements.uploadSubmit.textContent =
+      uploadState.phase === "uploading"
+        ? "Uploading Receipt..."
+        : busy
+          ? "Processing Receipt..."
+          : "Upload And Process";
   }
+}
+
+function getUploadMotionCopy() {
+  if (uploadState.phase === "error") {
+    return {
+      title: "Upload interrupted",
+      detail: uploadState.message || "Receipt processing hit an error before the dashboard could update.",
+      scene: "Check the message, then try the upload again.",
+    };
+  }
+
+  if (uploadState.phase === "success") {
+    return {
+      title: "Dashboard refreshed",
+      detail: "Your new receipt has landed in the archive, totals, review queue, and charts.",
+      scene: uploadState.message,
+    };
+  }
+
+  switch (uploadState.stage) {
+    case "slot":
+      return {
+        title: uploadState.phase === "idle" ? "Waiting for upload" : "Securing upload slot",
+        detail:
+          uploadState.phase === "idle"
+            ? "AI extraction begins after the cloud upload completes."
+            : "ReceiptPulse is opening a signed cloud path for your file.",
+        scene:
+          uploadState.phase === "idle"
+            ? "Pick a file to preview its upload path."
+            : "Preparing a secure destination for this receipt.",
+      };
+    case "transfer":
+      return {
+        title: "Moving into cloud intake",
+        detail: "The file card is traveling upward into S3 before extraction starts.",
+        scene: uploadState.message,
+      };
+    case "textract":
+      return {
+        title: "Extracting merchant and totals",
+        detail: "AI is reading the vendor, amount, date, and line items from the receipt.",
+        scene: uploadState.message,
+      };
+    case "quality":
+      return {
+        title: "Checking confidence and duplicates",
+        detail: "Review rules are verifying the extracted fields before the receipt is posted.",
+        scene: uploadState.message,
+      };
+    case "stored":
+      return {
+        title: "Updating the dashboard",
+        detail: "The new receipt is being folded into your charts, history, and spotlight summary.",
+        scene: uploadState.message,
+      };
+    default:
+      return {
+        title: "Preparing receipt flow",
+        detail: "ReceiptPulse is lining up the next upload stages.",
+        scene: uploadState.message,
+      };
+  }
+}
+
+function syncUploadMotion() {
+  if (!elements.uploadMotionScene) {
+    return;
+  }
+
+  const currentFile = elements.fileInput?.files?.[0] || null;
+  const receiptTheme = uploadState.receipt
+    ? getReceiptTheme(uploadState.receipt)
+    : getVisualTheme(uploadState.customLabel || currentFile?.name || uploadState.fileName || "receipt");
+  const primaryLabel =
+    uploadState.customLabel ||
+    uploadState.receipt?.receiptLabel ||
+    currentFile?.name ||
+    uploadState.fileName ||
+    "Next receipt";
+  const motionCopy = getUploadMotionCopy();
+
+  elements.uploadMotionScene.dataset.phase = uploadState.phase;
+  elements.uploadMotionScene.dataset.stage = uploadState.stage || "slot";
+  elements.uploadMotionScene.style.setProperty("--motion-accent", receiptTheme.color);
+  elements.uploadMotionScene.style.setProperty("--motion-soft", receiptTheme.soft);
+  elements.uploadMotionScene.style.setProperty("--motion-ring", receiptTheme.ring);
+
+  if (elements.uploadMotionIcon) {
+    elements.uploadMotionIcon.textContent = receiptTheme.icon;
+  }
+  if (elements.uploadMotionLabel) {
+    elements.uploadMotionLabel.textContent = primaryLabel;
+  }
+  if (elements.uploadMotionDetail) {
+    elements.uploadMotionDetail.textContent = motionCopy.scene;
+  }
+  if (elements.uploadMotionStage) {
+    elements.uploadMotionStage.textContent = motionCopy.title;
+  }
+  if (elements.uploadMotionStageCopy) {
+    elements.uploadMotionStageCopy.textContent = motionCopy.detail;
+  }
+
+  elements.uploadMotionReceipt?.classList.toggle(
+    "motion-receipt-armed",
+    Boolean(currentFile || uploadState.fileName || uploadState.receipt)
+  );
 }
 
 function renderSpotlight() {
@@ -996,7 +1168,7 @@ function renderCategoryChart() {
   elements.categoryChart.innerHTML = grouped
     .map(
       (item) => `
-        <div class="chart-row themed-card" style="${getRowThemeVars(item.theme)}">
+        <div class="chart-row themed-card" data-label="${escapeHtml(item.label)}" style="${getRowThemeVars(item.theme)}">
           <div class="chart-meta">
             <strong><span class="receipt-icon-badge">${item.theme.icon}</span>${escapeHtml(item.label)}</strong>
             <span class="muted">$${Number(item.amount).toFixed(2)} - ${item.share.toFixed(1)}%</span>
@@ -1355,7 +1527,7 @@ function bindInteractiveFX() {
 function bindGlowTargets() {
   document
     .querySelectorAll(
-      ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card, .ops-card, .spotlight-stat, .flip-card, .timeline-step, .dropzone"
+      ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card, .ops-card, .spotlight-stat, .flip-card, .timeline-step, .dropzone, .chart-row, .legend-row"
     )
     .forEach((element) => {
       if (element.dataset.fxBound === "true") {
@@ -1392,7 +1564,7 @@ function bindGlowTargets() {
 
 function observeRevealTargets() {
   const targets = document.querySelectorAll(
-    ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card, .ops-card, .spotlight-stat, .flip-card, .timeline-step"
+    ".panel, .glass-card, .vendor-row, .queue-item, .workflow-node, .metric-card, .ops-card, .spotlight-stat, .flip-card, .timeline-step, .chart-row, .legend-row"
   );
 
   targets.forEach((target) => {
@@ -1486,6 +1658,7 @@ async function handleUpload(event) {
       objectKey: "",
       receipt: null,
       customLabel: receiptLabel,
+      fileName: file.name,
       startedAt: Date.now(),
       durationMs: null,
     };
@@ -1503,10 +1676,16 @@ async function handleUpload(event) {
       session.pollAfterMs || POLL_INTERVAL_MS
     );
 
+    processedReceipt.receiptLabel = receiptLabel || processedReceipt.receiptLabel;
     uploadState.receipt = processedReceipt;
     uploadState.durationMs = Math.max(0, Date.now() - uploadState.startedAt);
-    setUploadState("success", "stored", "Receipt processed and added to the console.");
+    pendingVisualRefresh = {
+      label: getReceiptDisplayLabel(processedReceipt),
+      theme: getReceiptTheme(processedReceipt),
+    };
+    setUploadState("processing", "stored", "Updating charts and history with your new receipt.");
     await refreshLiveSnapshot();
+    setUploadState("success", "stored", "Receipt processed and added to the console.");
     addUploadHistoryEntry(file, processedReceipt, receiptLabel);
     triggerSuccessBurst(elements.uploadSubmit);
     scrollToProcessedResult();
@@ -1607,6 +1786,11 @@ async function refreshLiveSnapshot() {
   }
 
   renderDashboard();
+
+  if (pendingVisualRefresh && uploadState.receipt) {
+    playDashboardArrivalEffects(uploadState.receipt, pendingVisualRefresh);
+    pendingVisualRefresh = null;
+  }
 }
 
 function setUploadState(phase, stage, message) {
@@ -1619,6 +1803,7 @@ function setUploadState(phase, stage, message) {
   renderOpsStrip();
   renderUploadTimeline();
   renderSpotlight();
+  syncUploadMotion();
 }
 
 function loadUploadHistory() {
@@ -1698,6 +1883,7 @@ async function updatePreviewFromFile(file) {
         <strong>Add a label for custom styling</strong>
       </article>
     `;
+    syncUploadMotion();
     return;
   }
 
@@ -1731,6 +1917,7 @@ async function updatePreviewFromFile(file) {
       <strong>${formatFileSize(file.size)} · ${latestPreview.type === "image" ? "Image" : "PDF"}</strong>
     </article>
   `;
+  syncUploadMotion();
 }
 
 async function createPreviewPayload(file) {
@@ -2027,11 +2214,12 @@ function renderExpenseDonut() {
       <small>${visibleReceipts.length} receipt${visibleReceipts.length === 1 ? "" : "s"}</small>
     </div>
   `;
+  elements.expenseDonut.dataset.total = totalAmount.toFixed(2);
 
   elements.expenseLegend.innerHTML = slices
     .map(
       (slice) => `
-        <article class="legend-row" style="${getRowThemeVars(slice.theme)}">
+        <article class="legend-row" data-label="${escapeHtml(slice.label)}" style="${getRowThemeVars(slice.theme)}">
           <div class="legend-copy">
             <span class="legend-swatch" style="background:${slice.theme.color}"></span>
             <strong>${slice.theme.icon} ${escapeHtml(slice.label)}</strong>
@@ -2044,6 +2232,66 @@ function renderExpenseDonut() {
       `
     )
     .join("");
+}
+
+function playDashboardArrivalEffects(receipt, visualRefresh) {
+  const resolvedReceipt = receipt || uploadState.receipt;
+  if (!resolvedReceipt) {
+    return;
+  }
+
+  const theme = visualRefresh?.theme || getReceiptTheme(resolvedReceipt);
+  const label = visualRefresh?.label || getReceiptDisplayLabel(resolvedReceipt);
+
+  triggerExpenseDonutRefresh(theme);
+  triggerReceiptHighlight(label);
+}
+
+function triggerExpenseDonutRefresh(theme) {
+  if (!elements.expenseDonut || !theme) {
+    return;
+  }
+
+  window.clearTimeout(donutRefreshTimer);
+  elements.expenseDonut.style.setProperty("--refresh-color", theme.color);
+  elements.expenseDonut.style.setProperty("--refresh-soft", theme.soft);
+  elements.expenseDonut.classList.remove("is-refreshing");
+  void elements.expenseDonut.offsetWidth;
+  elements.expenseDonut.classList.add("is-refreshing");
+
+  donutRefreshTimer = window.setTimeout(() => {
+    elements.expenseDonut?.classList.remove("is-refreshing");
+  }, 1250);
+}
+
+function triggerReceiptHighlight(label) {
+  const targets = [
+    ...Array.from(elements.categoryChart?.querySelectorAll("[data-label]") || []),
+    ...Array.from(elements.expenseLegend?.querySelectorAll("[data-label]") || []),
+  ];
+
+  if (!targets.length) {
+    return;
+  }
+
+  targets.forEach((target) => {
+    const matches = target.dataset.label === label;
+    target.classList.remove("is-fresh");
+    if (matches) {
+      void target.offsetWidth;
+      target.classList.add("is-fresh");
+    }
+  });
+
+  elements.spotlightPanel?.classList.remove("spotlight-panel-fresh");
+  void elements.spotlightPanel?.offsetWidth;
+  elements.spotlightPanel?.classList.add("spotlight-panel-fresh");
+
+  window.clearTimeout(panelRefreshTimer);
+  panelRefreshTimer = window.setTimeout(() => {
+    targets.forEach((target) => target.classList.remove("is-fresh"));
+    elements.spotlightPanel?.classList.remove("spotlight-panel-fresh");
+  }, 1500);
 }
 
 function scrollToProcessedResult() {
