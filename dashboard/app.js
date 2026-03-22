@@ -365,6 +365,7 @@ const FALLBACK_DASHBOARD = {
 const elements = {
   cursorOrb: document.querySelector("#cursorOrb"),
   cursorRing: document.querySelector("#cursorRing"),
+  cursorDrips: document.querySelector("#cursorDrips"),
   dashboardPeriodSelect: document.querySelector("#dashboardPeriodSelect"),
   metricsGrid: document.querySelector("#metricsGrid"),
   categoryChart: document.querySelector("#categoryChart"),
@@ -2536,8 +2537,8 @@ function initCursorFX() {
     return;
   }
 
-  const { cursorOrb, cursorRing } = elements;
-  if (!cursorOrb || !cursorRing) {
+  const { cursorOrb, cursorRing, cursorDrips } = elements;
+  if (!cursorOrb || !cursorRing || !cursorDrips) {
     return;
   }
 
@@ -2548,10 +2549,25 @@ function initCursorFX() {
   let ringX = pointerX;
   let ringY = pointerY;
 
+  const positionDroplet = (x, y) => {
+    cursorOrb.style.left = `${x}px`;
+    cursorOrb.style.top = `${y}px`;
+    cursorDrips.style.left = `${x}px`;
+    cursorDrips.style.top = `${y}px`;
+  };
+
+  const positionRing = (x, y) => {
+    cursorRing.style.left = `${x}px`;
+    cursorRing.style.top = `${y}px`;
+  };
+
+  positionDroplet(pointerX, pointerY);
+  positionRing(ringX, ringY);
+
   document.addEventListener("pointermove", (event) => {
     pointerX = event.clientX;
     pointerY = event.clientY;
-    cursorOrb.style.transform = `translate(${pointerX}px, ${pointerY}px)`;
+    positionDroplet(pointerX, pointerY);
   });
 
   document.addEventListener("pointerdown", () => {
@@ -2565,7 +2581,7 @@ function initCursorFX() {
   const tick = () => {
     ringX += (pointerX - ringX) * 0.18;
     ringY += (pointerY - ringY) * 0.18;
-    cursorRing.style.transform = `translate(${ringX}px, ${ringY}px)`;
+    positionRing(ringX, ringY);
     requestAnimationFrame(tick);
   };
 

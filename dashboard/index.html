@@ -8,19 +8,42 @@
       name="description"
       content="ReceiptPulse is a polished personal receipt app that reads your bills, sorts spending automatically, and turns uploads into clean daily-use insights."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260322i" />
+    <link rel="stylesheet" href="./styles.css?v=20260322j" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
     <div class="cursor-ring" id="cursorRing" aria-hidden="true"></div>
+    <div class="cursor-drips" id="cursorDrips" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
     <div class="aurora aurora-one"></div>
     <div class="aurora aurora-two"></div>
     <div class="grid-sheen"></div>
 
     <header class="topbar">
+      <div class="topbar-row topbar-row-main">
+        <div class="brand-lockup">
+          <p class="brand-mark">ReceiptPulse</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="status-pill" id="modeBadge">Demo Dataset</span>
+          <span class="status-note" id="statusNote">Booting console.</span>
+          <button class="ghost-link ghost-button" id="historyToggle" type="button">Past Uploads</button>
+          <a
+            class="ghost-link"
+            href="https://github.com/agarwalujala3-lang/ReceiptPulse/blob/main/docs/deployment.md#custom-domain-on-cloudfront"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Custom Domain
+          </a>
+          <a class="ghost-link" href="https://github.com/agarwalujala3-lang/ReceiptPulse" target="_blank" rel="noreferrer">GitHub Repo</a>
+        </div>
+      </div>
       <div class="topbar-copy">
-        <p class="eyebrow">ReceiptPulse</p>
-        <h1>Upload receipts. Keep spending organized.</h1>
         <p class="topbar-text">
           ReceiptPulse is a clean personal receipt app that reads merchants, totals, and categories
           automatically so your bills turn into useful spending history.
@@ -30,6 +53,8 @@
           <span>Your label wins</span>
           <span>Instant spend charts</span>
         </div>
+      </div>
+      <div class="topbar-row topbar-row-range">
         <div class="topbar-range">
           <label class="select-shell">
             <span>Dashboard Range</span>
@@ -42,20 +67,6 @@
             </select>
           </label>
         </div>
-      </div>
-      <div class="topbar-actions">
-        <span class="status-pill" id="modeBadge">Demo Dataset</span>
-        <span class="status-note" id="statusNote">Booting console.</span>
-        <button class="ghost-link ghost-button" id="historyToggle" type="button">Past Uploads</button>
-        <a
-          class="ghost-link"
-          href="https://github.com/agarwalujala3-lang/ReceiptPulse/blob/main/docs/deployment.md#custom-domain-on-cloudfront"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Custom Domain
-        </a>
-        <a class="ghost-link" href="https://github.com/agarwalujala3-lang/ReceiptPulse" target="_blank" rel="noreferrer">GitHub Repo</a>
       </div>
     </header>
 
@@ -396,7 +407,7 @@
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260322i"></script>
-    <script src="./app.js?v=20260322i" defer></script>
+    <script src="./config.js?v=20260322j"></script>
+    <script src="./app.js?v=20260322j" defer></script>
   </body>
 </html>
