@@ -97,7 +97,7 @@ def scan_receipts():
     scan_args = {
         "ProjectionExpression": (
             "receipt_id, vendor, category, review_status, total_amount, "
-            "confidence_score, expense_month, uploaded_by, s3_path, "
+            "confidence_score, expense_month, uploaded_by, receipt_label, s3_path, "
             "processed_timestamp, is_duplicate, review_reasons, file_name, "
             "currency_symbol, duplicate_of, item_count, #receipt_key"
         ),
@@ -144,12 +144,17 @@ def create_upload_session(payload):
     file_name = sanitize_filename(payload.get("fileName") or "receipt-upload")
     content_type = payload.get("contentType") or "application/octet-stream"
     uploader_email = (payload.get("uploaderEmail") or "ops@receiptpulse.dev").strip()
-    uploader_name = (payload.get("uploaderName") or "Finance Desk").strip()
+    receipt_label = (
+        payload.get("receiptLabel")
+        or payload.get("uploaderName")
+        or ""
+    ).strip()
     stamp = datetime.now(timezone.utc).strftime("%Y/%m/%d")
     object_key = f"incoming/{stamp}/{uuid.uuid4().hex[:12]}-{file_name}"
     metadata = {
         "uploader-email": uploader_email[:120],
-        "uploader-name": uploader_name[:120],
+        "uploader-name": receipt_label[:120],
+        "receipt-label": receipt_label[:120],
     }
 
     upload_url = s3.generate_presigned_url(
@@ -172,6 +177,7 @@ def create_upload_session(payload):
             "Content-Type": content_type,
             "x-amz-meta-uploader-email": metadata["uploader-email"],
             "x-amz-meta-uploader-name": metadata["uploader-name"],
+            "x-amz-meta-receipt-label": metadata["receipt-label"],
         },
         "pollAfterMs": 2200,
     }
@@ -281,6 +287,7 @@ def build_analytics(receipts):
                     "receiptId": receipt.get("receipt_id"),
                     "vendor": vendor,
                     "category": category,
+                    "receiptLabel": receipt.get("receipt_label", ""),
                     "totalAmount": receipt.get("total_amount", "0.00"),
                     "reviewStatus": status,
                     "reasons": receipt.get("review_reasons", []),
@@ -333,6 +340,7 @@ def export_csv(receipts):
             "confidence_score",
             "expense_month",
             "uploaded_by",
+            "receipt_label",
             "s3_path",
         ],
     )
@@ -348,6 +356,7 @@ def export_csv(receipts):
                 "confidence_score": receipt.get("confidence_score"),
                 "expense_month": receipt.get("expense_month"),
                 "uploaded_by": receipt.get("uploaded_by"),
+                "receipt_label": receipt.get("receipt_label"),
                 "s3_path": receipt.get("s3_path"),
             }
         )
@@ -436,6 +445,7 @@ def serialize_receipt(receipt):
         "confidenceScore": receipt.get("confidence_score", "0.00"),
         "expenseMonth": receipt.get("expense_month"),
         "uploadedBy": receipt.get("uploaded_by"),
+        "receiptLabel": receipt.get("receipt_label", ""),
         "s3Path": receipt.get("s3_path"),
         "processedAt": receipt.get("processed_timestamp"),
         "fileName": receipt.get("file_name"),

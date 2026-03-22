@@ -110,6 +110,11 @@ def process_record(record):
         or metadata.get("owner-email")
         or DEFAULT_RECIPIENT_EMAIL
     )
+    receipt_label = (
+        metadata.get("receipt-label")
+        or metadata.get("uploader-name")
+        or ""
+    ).strip()
 
     receipt_data = process_receipt_with_textract(
         bucket=bucket,
@@ -117,6 +122,7 @@ def process_record(record):
         object_size=object_size,
         etag=etag,
         uploader_email=uploader_email,
+        receipt_label=receipt_label,
     )
 
     duplicate_receipt = find_duplicate_receipt(receipt_data["duplicate_key"])
@@ -183,7 +189,7 @@ def extract_event_payloads(event):
     return []
 
 
-def process_receipt_with_textract(bucket, key, object_size, etag, uploader_email):
+def process_receipt_with_textract(bucket, key, object_size, etag, uploader_email, receipt_label=""):
     response = textract.analyze_expense(
         Document={
             "S3Object": {
@@ -203,6 +209,7 @@ def process_receipt_with_textract(bucket, key, object_size, etag, uploader_email
         "source_size": int(object_size or 0),
         "etag": etag,
         "uploaded_by": uploader_email,
+        "receipt_label": receipt_label[:120],
         "created_at": now.isoformat(),
         "processed_timestamp": now.isoformat(),
         "date": now.strftime("%Y-%m-%d"),

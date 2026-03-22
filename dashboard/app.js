@@ -37,6 +37,96 @@ const HOW_IT_WORKS = [
       "That makes the project feel like a real expense product instead of a backend demo hidden behind technical infrastructure.",
   },
 ];
+const VISUAL_PRESETS = [
+  {
+    key: "food",
+    icon: "🍜",
+    color: "#ff8a5b",
+    soft: "rgba(255, 138, 91, 0.18)",
+    ring: "rgba(255, 138, 91, 0.42)",
+    keywords: ["food", "dining", "restaurant", "cafe", "coffee", "snack", "lunch", "dinner", "pizza", "burger"],
+  },
+  {
+    key: "shopping",
+    icon: "🛍️",
+    color: "#ff6fb5",
+    soft: "rgba(255, 111, 181, 0.18)",
+    ring: "rgba(255, 111, 181, 0.42)",
+    keywords: ["shopping", "retail", "amazon", "store", "mart", "fashion", "gift", "boutique"],
+  },
+  {
+    key: "travel",
+    icon: "✈️",
+    color: "#63b3ff",
+    soft: "rgba(99, 179, 255, 0.18)",
+    ring: "rgba(99, 179, 255, 0.42)",
+    keywords: ["travel", "flight", "trip", "hotel", "uber", "cab", "ola", "taxi", "air", "booking"],
+  },
+  {
+    key: "electricity",
+    icon: "⚡",
+    color: "#ffd84d",
+    soft: "rgba(255, 216, 77, 0.18)",
+    ring: "rgba(255, 216, 77, 0.4)",
+    keywords: ["electricity", "electric", "power", "current", "bill", "utility", "utilities", "meter"],
+  },
+  {
+    key: "groceries",
+    icon: "🛒",
+    color: "#63df97",
+    soft: "rgba(99, 223, 151, 0.18)",
+    ring: "rgba(99, 223, 151, 0.4)",
+    keywords: ["groceries", "grocery", "vegetable", "supermarket", "mart", "fresh"],
+  },
+  {
+    key: "medical",
+    icon: "🩺",
+    color: "#65d8ff",
+    soft: "rgba(101, 216, 255, 0.18)",
+    ring: "rgba(101, 216, 255, 0.4)",
+    keywords: ["medical", "hospital", "clinic", "pharma", "medicine", "doctor", "health"],
+  },
+  {
+    key: "fuel",
+    icon: "⛽",
+    color: "#ffb258",
+    soft: "rgba(255, 178, 88, 0.18)",
+    ring: "rgba(255, 178, 88, 0.4)",
+    keywords: ["fuel", "petrol", "diesel", "gas", "station"],
+  },
+  {
+    key: "entertainment",
+    icon: "🎉",
+    color: "#a88cff",
+    soft: "rgba(168, 140, 255, 0.18)",
+    ring: "rgba(168, 140, 255, 0.42)",
+    keywords: ["movie", "entertainment", "party", "game", "fun", "event", "ticket"],
+  },
+  {
+    key: "home",
+    icon: "🏠",
+    color: "#7ed6ff",
+    soft: "rgba(126, 214, 255, 0.18)",
+    ring: "rgba(126, 214, 255, 0.42)",
+    keywords: ["rent", "home", "house", "repair", "furniture", "decor"],
+  },
+  {
+    key: "subscription",
+    icon: "📱",
+    color: "#62e1d9",
+    soft: "rgba(98, 225, 217, 0.18)",
+    ring: "rgba(98, 225, 217, 0.42)",
+    keywords: ["subscription", "internet", "wifi", "netflix", "spotify", "phone", "mobile", "broadband"],
+  },
+];
+const FUN_FALLBACK_SWATCHES = [
+  { icon: "🌈", color: "#ff7ecf", soft: "rgba(255, 126, 207, 0.18)", ring: "rgba(255, 126, 207, 0.42)" },
+  { icon: "✨", color: "#7de7ff", soft: "rgba(125, 231, 255, 0.18)", ring: "rgba(125, 231, 255, 0.42)" },
+  { icon: "🎈", color: "#ffae5f", soft: "rgba(255, 174, 95, 0.18)", ring: "rgba(255, 174, 95, 0.42)" },
+  { icon: "💜", color: "#b48fff", soft: "rgba(180, 143, 255, 0.18)", ring: "rgba(180, 143, 255, 0.42)" },
+  { icon: "🪄", color: "#6ee7b7", soft: "rgba(110, 231, 183, 0.18)", ring: "rgba(110, 231, 183, 0.42)" },
+];
+const IGNORED_LABELS = new Set(["", "finance desk", "receiptpulse", "ops"]);
 const FALLBACK_DASHBOARD = {
   summary: {
     receiptCount: 18,
@@ -315,9 +405,10 @@ let selectedExpenseMonth = "";
 let uploadState = {
   phase: "idle",
   stage: "slot",
-  message: "Choose a receipt from your device to start a new upload.",
+  message: "Choose a receipt from your device to start a colorful new upload.",
   objectKey: "",
   receipt: null,
+  customLabel: "",
   startedAt: 0,
   durationMs: null,
 };
@@ -363,6 +454,7 @@ function mapReceipt(receipt) {
     receiptId: receipt.receiptId || receipt.receipt_id || "receipt",
     vendor: receipt.vendor || "Unknown Vendor",
     category: receipt.category || "Uncategorized",
+    receiptLabel: receipt.receiptLabel || receipt.receipt_label || "",
     reviewStatus: receipt.reviewStatus || receipt.review_status || "UNKNOWN",
     totalAmount: receipt.totalAmount || receipt.total_amount || "0.00",
     confidenceScore: receipt.confidenceScore || receipt.confidence_score || "0.00",
@@ -376,6 +468,113 @@ function mapReceipt(receipt) {
     reviewReasons: receipt.reviewReasons || receipt.review_reasons || [],
     processedAt: receipt.processedAt || receipt.processed_timestamp || "",
   };
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function normalizeVisualText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function hashString(value) {
+  return Array.from(String(value || "")).reduce(
+    (sum, char) => (sum * 31 + char.charCodeAt(0)) % 2147483647,
+    7
+  );
+}
+
+function getReceiptLabelOverride(receipt) {
+  const label = String(receipt?.receiptLabel || "").trim();
+  if (!label) {
+    return "";
+  }
+  const normalized = normalizeVisualText(label);
+  if (IGNORED_LABELS.has(normalized)) {
+    return "";
+  }
+  return label;
+}
+
+function buildFallbackTheme(label) {
+  const swatch = FUN_FALLBACK_SWATCHES[hashString(label) % FUN_FALLBACK_SWATCHES.length];
+  return {
+    key: `custom-${hashString(label) % FUN_FALLBACK_SWATCHES.length}`,
+    icon: swatch.icon,
+    color: swatch.color,
+    soft: swatch.soft,
+    ring: swatch.ring,
+  };
+}
+
+function getVisualTheme(source) {
+  const normalized = normalizeVisualText(source);
+  if (!normalized) {
+    return {
+      key: "receipt",
+      icon: "🧾",
+      color: "#7de7ff",
+      soft: "rgba(125, 231, 255, 0.18)",
+      ring: "rgba(125, 231, 255, 0.42)",
+    };
+  }
+
+  const preset = VISUAL_PRESETS.find((item) =>
+    item.keywords.some((keyword) => normalized.includes(keyword))
+  );
+
+  if (preset) {
+    return preset;
+  }
+
+  return buildFallbackTheme(normalized);
+}
+
+function getReceiptDisplayLabel(receipt) {
+  return getReceiptLabelOverride(receipt) || receipt.category || receipt.vendor || "Receipt";
+}
+
+function getReceiptTheme(receipt) {
+  return getVisualTheme(getReceiptDisplayLabel(receipt));
+}
+
+function getRowThemeVars(theme) {
+  return `--theme-accent:${theme.color};--theme-soft:${theme.soft};--theme-ring:${theme.ring};`;
+}
+
+function groupReceiptsByVisualLabel(receipts) {
+  const totals = new Map();
+
+  receipts.forEach((receipt) => {
+    const label = getReceiptDisplayLabel(receipt);
+    const theme = getReceiptTheme(receipt);
+    const amount = Number(receipt.totalAmount || 0);
+    const existing = totals.get(label) || {
+      label,
+      amount: 0,
+      share: 0,
+      theme,
+    };
+    existing.amount += amount;
+    existing.theme = theme;
+    totals.set(label, existing);
+  });
+
+  const rows = Array.from(totals.values()).sort((left, right) => right.amount - left.amount);
+  const total = rows.reduce((sum, item) => sum + item.amount, 0) || 1;
+  rows.forEach((row) => {
+    row.share = (row.amount / total) * 100;
+  });
+  return rows;
 }
 
 function adaptApiPayload(analytics, receipts) {
@@ -583,14 +782,23 @@ function renderSpotlight() {
     elements.spotlightNarrative.textContent =
       "Select a file from your device, upload it to S3, and this area will switch into the latest processed expense summary for your own upload.";
     elements.spotlightFacts.innerHTML = "";
+    elements.spotlightPanel?.style.removeProperty("--theme-accent");
+    elements.spotlightPanel?.style.removeProperty("--theme-soft");
+    elements.spotlightPanel?.style.removeProperty("--theme-ring");
     return;
   }
 
+  const theme = getReceiptTheme(receipt);
+  const displayLabel = getReceiptDisplayLabel(receipt);
+  elements.spotlightPanel?.setAttribute("style", getRowThemeVars(theme));
   elements.spotlightKicker.textContent = "Latest processed expense";
-  elements.spotlightTitle.textContent = `${receipt.vendor} - ${formatLabel(receipt.reviewStatus)}`;
+  elements.spotlightTitle.innerHTML = `<span class="receipt-icon-badge">${theme.icon}</span>${escapeHtml(
+    displayLabel
+  )} · ${escapeHtml(formatLabel(receipt.reviewStatus))}`;
   elements.spotlightNarrative.textContent = buildSpotlightNarrative(receipt);
 
   const facts = [
+    ["Visual tag", displayLabel],
     ["Total", `${receipt.currencySymbol || "$"}${Number(receipt.totalAmount || 0).toFixed(2)}`],
     ["Confidence", `${Number(receipt.confidenceScore || 0).toFixed(1)}%`],
     ["Category", receipt.category],
@@ -685,9 +893,17 @@ function renderUploadHistory() {
   }
 
   elements.historyList.innerHTML = uploadHistory
-    .map(
-      (entry) => `
-        <article class="history-item panel">
+    .map((entry) => {
+      const fauxReceipt = {
+        category: entry.category || "Uncategorized",
+        receiptLabel: entry.receiptLabel || "",
+        vendor: entry.vendor || "Unknown Vendor",
+      };
+      const theme = getReceiptTheme(fauxReceipt);
+      const displayLabel = getReceiptDisplayLabel(fauxReceipt);
+
+      return `
+        <article class="history-item panel" style="${getRowThemeVars(theme)}">
           ${
             entry.previewDataUrl
               ? `<img class="history-thumb" src="${entry.previewDataUrl}" alt="${entry.fileName} preview" />`
@@ -695,21 +911,22 @@ function renderUploadHistory() {
           }
           <div class="history-meta">
             <div class="history-topline">
-              <span class="history-name">${entry.fileName}</span>
+              <span class="history-name"><span class="receipt-icon-badge">${theme.icon}</span>${escapeHtml(entry.fileName)}</span>
               <span class="status-tag status-${entry.reviewStatus.toLowerCase().replace(/_/g, "-")}">${formatLabel(entry.reviewStatus)}</span>
             </div>
             <div class="history-subline">
-              <strong>${entry.vendor}</strong>
+              <strong>${escapeHtml(displayLabel)}</strong>
               <span class="muted">${entry.currencySymbol}${Number(entry.totalAmount || 0).toFixed(2)}</span>
             </div>
             <div class="history-subline">
+              <span class="receipt-mini-pill">${theme.icon} ${escapeHtml(entry.vendor)}</span>
               <span class="muted">${formatRelativeTime(entry.processedAt)}</span>
               <span class="muted">${formatProcessingDuration(entry.durationMs)}</span>
             </div>
           </div>
         </article>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -767,23 +984,25 @@ function renderMetrics() {
 }
 
 function renderCategoryChart() {
-  if (!dashboardData.categoryBreakdown.length) {
+  const grouped = groupReceiptsByVisualLabel(dashboardData.receipts || []);
+
+  if (!grouped.length) {
     elements.categoryChart.innerHTML =
       '<p class="muted">No category data is available yet.</p>';
     return;
   }
 
-  const maxAmount = Math.max(...dashboardData.categoryBreakdown.map((item) => item.amount), 1);
-  elements.categoryChart.innerHTML = dashboardData.categoryBreakdown
+  const maxAmount = Math.max(...grouped.map((item) => item.amount), 1);
+  elements.categoryChart.innerHTML = grouped
     .map(
       (item) => `
-        <div class="chart-row">
+        <div class="chart-row themed-card" style="${getRowThemeVars(item.theme)}">
           <div class="chart-meta">
-            <strong>${item.label}</strong>
-            <span class="muted">$${Number(item.amount).toFixed(2)} - ${item.share}%</span>
+            <strong><span class="receipt-icon-badge">${item.theme.icon}</span>${escapeHtml(item.label)}</strong>
+            <span class="muted">$${Number(item.amount).toFixed(2)} - ${item.share.toFixed(1)}%</span>
           </div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:${(item.amount / maxAmount) * 100}%"></div>
+            <div class="bar-fill" style="width:${(item.amount / maxAmount) * 100}%; background:${item.theme.color}"></div>
           </div>
         </div>
       `
@@ -799,20 +1018,23 @@ function renderVendors() {
   }
 
   elements.vendorList.innerHTML = dashboardData.topVendors
-    .map(
-      (vendor) => `
-        <div class="vendor-row">
+    .map((vendor) => {
+      const matchingReceipt =
+        (dashboardData.receipts || []).find((receipt) => receipt.vendor === vendor.vendor) || vendor;
+      const theme = getReceiptTheme(matchingReceipt);
+      return `
+        <div class="vendor-row" style="${getRowThemeVars(theme)}">
           <div class="vendor-meta">
-            <strong>${vendor.vendor}</strong>
+            <strong><span class="receipt-icon-badge">${theme.icon}</span>${escapeHtml(vendor.vendor)}</strong>
             <span class="vendor-share">${vendor.share}% of spend</span>
           </div>
           <div class="bar-track">
-            <div class="bar-fill" style="width:${vendor.share}%"></div>
+            <div class="bar-fill" style="width:${vendor.share}%; background:${theme.color}"></div>
           </div>
           <span class="muted">$${Number(vendor.amount).toFixed(2)}</span>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -837,23 +1059,25 @@ function renderQueue() {
   }
 
   elements.queueList.innerHTML = dashboardData.reviewQueue
-    .map(
-      (receipt) => `
-        <article class="queue-item">
+    .map((receipt) => {
+      const theme = getReceiptTheme(receipt);
+      const displayLabel = getReceiptDisplayLabel(receipt);
+      return `
+        <article class="queue-item" style="${getRowThemeVars(theme)}">
           <div class="queue-header">
-            <strong>${receipt.vendor}</strong>
+            <strong><span class="receipt-icon-badge">${theme.icon}</span>${escapeHtml(displayLabel)}</strong>
             <span class="status-tag status-${receipt.reviewStatus.toLowerCase().replace(/_/g, "-")}">${formatLabel(receipt.reviewStatus)}</span>
           </div>
           <div class="receipt-line">
-            <span>${receipt.category}</span>
+            <span class="receipt-mini-pill">${theme.icon} ${escapeHtml(receipt.vendor)}</span>
             <span>$${Number(receipt.totalAmount).toFixed(2)}</span>
           </div>
           <ul class="reason-list">
-            ${receipt.reasons.map((reason) => `<li>${reason}</li>`).join("")}
+            ${(receipt.reasons || []).map((reason) => `<li>${escapeHtml(reason)}</li>`).join("")}
           </ul>
         </article>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -959,17 +1183,29 @@ function renderReceipts() {
   const latestId = uploadState.receipt?.receiptId || "";
 
   elements.receiptsBody.innerHTML = rows
-    .map(
-      (receipt) => `
-        <tr class="${receipt.receiptId === latestId ? "receipt-highlight-row" : ""}">
+    .map((receipt) => {
+      const theme = getReceiptTheme(receipt);
+      const displayLabel = getReceiptDisplayLabel(receipt);
+      const hasOverride = Boolean(getReceiptLabelOverride(receipt));
+      return `
+        <tr class="${receipt.receiptId === latestId ? "receipt-highlight-row" : ""}" style="${getRowThemeVars(theme)}">
           <td>
             <div class="receipt-stack">
-              <strong>${receipt.receiptId}</strong>
-              <span class="muted">${receipt.fileName || receipt.uploadedBy || "ops@receiptpulse.dev"}</span>
+              <strong class="receipt-mainline"><span class="receipt-icon-badge">${theme.icon}</span>${escapeHtml(displayLabel)}</strong>
+              <span class="muted">${escapeHtml(receipt.fileName || receipt.receiptId || "receipt")}</span>
             </div>
           </td>
-          <td>${receipt.vendor}</td>
-          <td>${receipt.category}</td>
+          <td><span class="receipt-mini-pill">${theme.icon} ${escapeHtml(receipt.vendor)}</span></td>
+          <td>
+            <div class="category-cell">
+              <span class="receipt-mini-pill">${theme.icon} ${escapeHtml(displayLabel)}</span>
+              ${
+                hasOverride
+                  ? `<span class="receipt-detected muted">AI detected: ${escapeHtml(receipt.category)}</span>`
+                  : ""
+              }
+            </div>
+          </td>
           <td>
             <span class="status-tag status-${receipt.reviewStatus.toLowerCase().replace(/_/g, "-")}">
               ${formatLabel(receipt.reviewStatus)}
@@ -979,8 +1215,8 @@ function renderReceipts() {
           <td>${Number(receipt.confidenceScore).toFixed(1)}%</td>
           <td>${receipt.expenseMonth}</td>
         </tr>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -1031,11 +1267,15 @@ function buildSpotlightNarrative(receipt) {
   const reasons = receipt.reviewReasons?.length
     ? ` Review reasons: ${receipt.reviewReasons.join(" ")}`
     : "";
+  const labelOverride = getReceiptLabelOverride(receipt);
+  const labelText = labelOverride
+    ? ` It is being styled as ${labelOverride} because you overrode the detected category.`
+    : "";
   return `${receipt.vendor} was classified as ${receipt.category} with a ${Number(
     receipt.confidenceScore || 0
   ).toFixed(1)}% confidence score and routed to ${formatLabel(
     receipt.reviewStatus
-  ).toLowerCase()} in the expense workflow.${reasons}`;
+  ).toLowerCase()} in the expense workflow.${labelText}${reasons}`;
 }
 
 function formatLabel(value) {
@@ -1175,6 +1415,10 @@ function bindUploadControls() {
     void updatePreviewFromFile(file);
   });
 
+  elements.uploadName?.addEventListener("input", () => {
+    void updatePreviewFromFile(elements.fileInput.files[0] || null);
+  });
+
   elements.uploadForm.addEventListener("submit", handleUpload);
 
   ["dragenter", "dragover"].forEach((eventName) => {
@@ -1227,7 +1471,7 @@ async function handleUpload(event) {
     return;
   }
 
-  const uploaderName = elements.uploadName.value.trim() || "Finance Desk";
+  const receiptLabel = elements.uploadName.value.trim();
   const uploaderEmail = elements.uploadEmail.value.trim() || "ops@receiptpulse.dev";
 
   try {
@@ -1235,12 +1479,13 @@ async function handleUpload(event) {
       ...uploadState,
       objectKey: "",
       receipt: null,
+      customLabel: receiptLabel,
       startedAt: Date.now(),
       durationMs: null,
     };
     setUploadState("preparing", "slot", "Requesting a secure upload slot from the API.");
 
-    const session = await requestUploadSession(file, uploaderName, uploaderEmail);
+    const session = await requestUploadSession(file, receiptLabel, uploaderEmail);
     uploadState.objectKey = session.objectKey;
 
     setUploadState("uploading", "transfer", "Uploading the receipt into the S3 intake bucket.");
@@ -1256,7 +1501,7 @@ async function handleUpload(event) {
     uploadState.durationMs = Math.max(0, Date.now() - uploadState.startedAt);
     setUploadState("success", "stored", "Receipt processed and added to the console.");
     await refreshLiveSnapshot();
-    addUploadHistoryEntry(file, processedReceipt);
+    addUploadHistoryEntry(file, processedReceipt, receiptLabel);
     triggerSuccessBurst(elements.uploadSubmit);
     scrollToProcessedResult();
   } catch (error) {
@@ -1265,14 +1510,15 @@ async function handleUpload(event) {
   }
 }
 
-async function requestUploadSession(file, uploaderName, uploaderEmail) {
+async function requestUploadSession(file, receiptLabel, uploaderEmail) {
   const response = await fetch(`${apiBase.replace(/\/$/, "")}/uploads`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       fileName: file.name,
       contentType: guessContentType(file),
-      uploaderName,
+      uploaderName: receiptLabel,
+      receiptLabel,
       uploaderEmail,
     }),
   });
@@ -1392,12 +1638,14 @@ function persistUploadHistory() {
   }
 }
 
-function addUploadHistoryEntry(file, receipt) {
+function addUploadHistoryEntry(file, receipt, receiptLabel = "") {
   const previewType = latestPreview?.type || (guessContentType(file) === "application/pdf" ? "pdf" : "file");
   const entry = {
     id: receipt.receiptId || `${Date.now()}`,
     fileName: receipt.fileName || file.name,
     vendor: receipt.vendor || "Unknown Vendor",
+    receiptLabel: receipt.receiptLabel || receiptLabel || "",
+    category: receipt.category || "Uncategorized",
     reviewStatus: receipt.reviewStatus || "UNKNOWN",
     totalAmount: receipt.totalAmount || "0.00",
     currencySymbol: receipt.currencySymbol || "$",
@@ -1436,18 +1684,20 @@ async function updatePreviewFromFile(file) {
         <strong>Awaiting file</strong>
       </article>
       <article class="preview-stat">
-        <span>Type</span>
-        <strong>Receipt</strong>
+        <span>Theme</span>
+        <strong>Auto detect</strong>
       </article>
       <article class="preview-stat">
-        <span>Visibility</span>
-        <strong>Browser-side preview</strong>
+        <span>Override</span>
+        <strong>Add a label for custom styling</strong>
       </article>
     `;
     return;
   }
 
   latestPreview = await createPreviewPayload(file);
+  const labelOverride = elements.uploadName?.value.trim() || "";
+  const theme = getVisualTheme(labelOverride || file.name);
 
   if (latestPreview.type === "image" && latestPreview.objectUrl) {
     elements.previewFrame.innerHTML = `<img class="preview-image" src="${latestPreview.objectUrl}" alt="${file.name} preview" />`;
@@ -1467,12 +1717,12 @@ async function updatePreviewFromFile(file) {
       <strong>Ready to upload</strong>
     </article>
     <article class="preview-stat">
-      <span>Type</span>
-      <strong>${latestPreview.type === "image" ? "Image receipt" : "PDF receipt"}</strong>
+      <span>Theme</span>
+      <strong>${theme.icon} ${escapeHtml(labelOverride || "Auto detect from receipt")}</strong>
     </article>
     <article class="preview-stat">
       <span>Size</span>
-      <strong>${formatFileSize(file.size)}</strong>
+      <strong>${formatFileSize(file.size)} · ${latestPreview.type === "image" ? "Image" : "PDF"}</strong>
     </article>
   `;
 }
@@ -1748,28 +1998,17 @@ function renderExpenseDonut() {
     return;
   }
 
-  const categoryTotals = new Map();
-  visibleReceipts.forEach((receipt) => {
-    const category = receipt.category || "Uncategorized";
-    const amount = Number(receipt.totalAmount || 0);
-    categoryTotals.set(category, (categoryTotals.get(category) || 0) + amount);
-  });
-
-  const slices = Array.from(categoryTotals.entries())
-    .map(([label, amount]) => ({ label, amount }))
-    .sort((left, right) => right.amount - left.amount);
-  const palette = ["#98f6ff", "#35d9ea", "#7ef0b5", "#f6c76f", "#ff9f71", "#9a8bff"];
+  const slices = groupReceiptsByVisualLabel(visibleReceipts);
   const totalAmount = slices.reduce((sum, item) => sum + item.amount, 0) || 1;
 
   let currentStop = 0;
   const gradientStops = slices
-    .map((slice, index) => {
+    .map((slice) => {
       const ratio = (slice.amount / totalAmount) * 100;
       const start = currentStop;
       currentStop += ratio;
       slice.share = ratio;
-      slice.color = palette[index % palette.length];
-      return `${slice.color} ${start.toFixed(2)}% ${currentStop.toFixed(2)}%`;
+      return `${slice.theme.color} ${start.toFixed(2)}% ${currentStop.toFixed(2)}%`;
     })
     .join(", ");
 
@@ -1786,10 +2025,10 @@ function renderExpenseDonut() {
   elements.expenseLegend.innerHTML = slices
     .map(
       (slice) => `
-        <article class="legend-row">
+        <article class="legend-row" style="${getRowThemeVars(slice.theme)}">
           <div class="legend-copy">
-            <span class="legend-swatch" style="background:${slice.color}"></span>
-            <strong>${slice.label}</strong>
+            <span class="legend-swatch" style="background:${slice.theme.color}"></span>
+            <strong>${slice.theme.icon} ${escapeHtml(slice.label)}</strong>
           </div>
           <div class="legend-values">
             <span>$${slice.amount.toFixed(2)}</span>

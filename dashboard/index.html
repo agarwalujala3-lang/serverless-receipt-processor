@@ -6,9 +6,9 @@
     <title>ReceiptPulse</title>
     <meta
       name="description"
-      content="ReceiptPulse is an expense tracking dashboard that captures receipts, extracts spend data automatically, and keeps finance teams on top of review, trends, and monthly totals."
+      content="ReceiptPulse is a playful receipt uploader that reads your bills, sorts them into colorful spend categories, and turns raw receipts into fun daily-use insights."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260322a" />
+    <link rel="stylesheet" href="./styles.css?v=20260322c" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -20,16 +20,16 @@
     <header class="topbar">
       <div class="topbar-copy">
         <p class="eyebrow">ReceiptPulse</p>
-        <h1>Expense tracking that reads receipts for you.</h1>
+        <h1>Snap receipts. Let ReceiptPulse sort the chaos.</h1>
         <p class="topbar-text">
-          Capture receipts from your own device, let the pipeline extract totals and vendors, then
-          review spend, exceptions, and history from one finance-ready workspace.
+          Upload any bill from your device and watch it turn into colorful spend cards, icons,
+          categories, and playful history instead of a boring document list.
         </p>
       </div>
       <div class="topbar-actions">
         <span class="status-pill" id="modeBadge">Demo Dataset</span>
         <span class="status-note" id="statusNote">Booting console.</span>
-        <button class="ghost-link ghost-button" id="historyToggle" type="button">Upload History</button>
+        <button class="ghost-link ghost-button" id="historyToggle" type="button">Past Uploads</button>
         <a
           class="ghost-link"
           href="https://github.com/agarwalujala3-lang/ReceiptPulse/blob/main/docs/deployment.md#custom-domain-on-cloudfront"
@@ -46,46 +46,52 @@
       <section class="control-grid">
         <section class="hero panel">
           <div class="hero-copy">
-            <p class="eyebrow">Expense Inbox</p>
-            <h2>Upload receipts, capture spend automatically, and keep monthly expenses organized.</h2>
+            <p class="eyebrow">Daily Receipt Drop</p>
+            <h2>Upload a bill and watch AI turn it into colorful spending stories.</h2>
             <p class="hero-text">
-              Built for expense tracking rather than a static demo. Finance teams can upload a
-              receipt, monitor extraction, inspect the latest result, and work through review items
-              without leaving the dashboard.
+              ReceiptPulse reads merchants, totals, categories, and trends automatically. If you
+              want your own vibe, give the receipt a custom label and the app will recolor the
+              icons and charts around it.
             </p>
+            <div class="fun-tags">
+              <span>🍜 Food</span>
+              <span>🛍️ Shopping</span>
+              <span>⚡ Electricity</span>
+              <span>✈️ Travel</span>
+            </div>
             <div class="hero-actions">
               <button class="primary-button" id="heroUploadTrigger" type="button">Upload Receipt</button>
-              <button class="secondary-button" id="archiveToggle" type="button">All Receipts</button>
+              <button class="secondary-button" id="archiveToggle" type="button">View All Receipts</button>
             </div>
           </div>
           <div class="hero-grid">
             <article class="glass-card spotlight">
-              <span class="mini-label">Review Control</span>
-              <strong id="riskHeadline">Low-confidence receipts are held before they affect totals.</strong>
-              <p>Confidence scoring, duplicate detection, and routing keep your expense ledger clean.</p>
+              <span class="mini-label">Smart Sorting</span>
+              <strong id="riskHeadline">Receipts are auto-sorted before they touch your charts.</strong>
+              <p>AI reads the bill, picks a category, and only stops when something feels risky or duplicated.</p>
             </article>
             <article class="glass-card">
-              <span class="mini-label">Posting Flow</span>
+              <span class="mini-label">Mood Board</span>
               <div class="pipeline">
-                <span>Upload</span>
-                <span>Extract</span>
-                <span>Review</span>
-                <span>Store</span>
-                <span>Report</span>
+                <span>Glow</span>
+                <span>Sort</span>
+                <span>Color</span>
+                <span>Track</span>
+                <span>Save</span>
               </div>
             </article>
             <article class="glass-card">
-              <span class="mini-label">Team Dashboard</span>
+              <span class="mini-label">Cute Overrides</span>
               <p>
-                One workspace for upload, receipt status, review decisions, spend mix, and monthly
-                reporting.
+                Call a receipt “Electricity” and its icon, chart color, and receipt tag all switch
+                to that vibe instantly.
               </p>
             </article>
             <article class="glass-card">
-              <span class="mini-label">Month-End Ready</span>
+              <span class="mini-label">Everyday Friendly</span>
               <p>
-                Historical archive, review states, category charts, and exports keep finance work
-                ready for month-end reconciliation.
+                This feels like a daily-use receipt app first, with fun visuals, hover glow, and
+                quick feedback every time something gets uploaded.
               </p>
             </article>
           </div>
@@ -95,7 +101,7 @@
           <div class="section-heading section-heading-tight">
             <div>
               <p class="eyebrow">Receipt Intake</p>
-              <h3>Add a new expense receipt</h3>
+              <h3>Drop in a receipt and give it a vibe</h3>
             </div>
             <span class="status-tag status-auto-approved upload-ready-pill">Live</span>
           </div>
@@ -134,12 +140,12 @@
 
             <div class="field-grid">
               <label class="field">
-                <span>Operator name</span>
-                <input class="text-input" id="uploadName" type="text" placeholder="Finance desk" />
+                <span>Receipt label</span>
+                <input class="text-input" id="uploadName" type="text" placeholder="Food run, Electricity, Shopping..." />
               </label>
               <label class="field">
-                <span>Operator email</span>
-                <input class="text-input" id="uploadEmail" type="email" placeholder="finance@company.com" />
+                <span>Receipt email</span>
+                <input class="text-input" id="uploadEmail" type="email" placeholder="you@example.com" />
               </label>
             </div>
 
@@ -147,7 +153,7 @@
               <button class="primary-button upload-submit" id="uploadSubmit" type="submit">
                 Upload And Process
               </button>
-              <span class="upload-helper">This uses the exact file you choose here, uploads it to S3, then runs extraction, duplicate checks, and review routing.</span>
+              <span class="upload-helper">Your custom receipt label overrides the detected category visuals. So if AI sees food but you name it electricity, the dashboard will style it like electricity.</span>
             </div>
           </form>
 
@@ -168,7 +174,7 @@
           <div class="section-heading section-heading-tight">
             <div>
               <p class="eyebrow">Your Current Upload</p>
-              <h3>Latest processed expense</h3>
+              <h3>Freshly sorted receipt</h3>
             </div>
           </div>
           <div class="spotlight-shell">
@@ -188,7 +194,7 @@
           <div class="section-heading section-heading-tight">
             <div>
               <p class="eyebrow">How It Works</p>
-              <h3>How the expense workflow fits together</h3>
+              <h3>Tap a card and see the magic underneath</h3>
             </div>
           </div>
           <div class="flip-grid" id="flipGrid"></div>
@@ -201,8 +207,8 @@
         <article class="panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Spending Mix</p>
-              <h3>Where this period's spend is concentrated</h3>
+              <p class="eyebrow">Colorful Spend Mix</p>
+              <h3>Each expense group gets its own icon and mood</h3>
             </div>
           </div>
           <div id="categoryChart" class="stack-chart"></div>
@@ -212,7 +218,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Merchant Overview</p>
-              <h3>Top merchants by processed spend</h3>
+              <h3>See where the money keeps going</h3>
             </div>
           </div>
           <div id="vendorList" class="vendor-list"></div>
@@ -222,8 +228,8 @@
       <section class="panel">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Processing Pipeline</p>
-            <h3>What happens after a receipt is uploaded</h3>
+            <p class="eyebrow">Behind The Glow</p>
+            <h3>What ReceiptPulse does after you upload something</h3>
           </div>
         </div>
         <div class="architecture-track" id="workflowTrack"></div>
@@ -233,8 +239,8 @@
         <article class="panel" id="reviewQueue">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Review Queue</p>
-              <h3>Receipts waiting for a finance decision</h3>
+              <p class="eyebrow">Needs A Second Look</p>
+              <h3>Receipts waiting for one more human check</h3>
             </div>
           </div>
           <div id="queueList" class="queue-list"></div>
@@ -243,8 +249,8 @@
         <article class="panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Monthly Spend</p>
-              <h3>Track receipt volume and expense totals over time</h3>
+              <p class="eyebrow">Monthly Glow-Up</p>
+              <h3>Watch your spend and receipt flow grow over time</h3>
             </div>
             <select class="month-select" id="expenseMonthSelect" aria-label="Expense month selector"></select>
           </div>
@@ -262,7 +268,7 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Receipt Archive</p>
-            <h3>Search, filter, and clean up stored expenses</h3>
+            <h3>Scroll through the receipts that shaped your spend</h3>
           </div>
           <div class="archive-actions">
             <div class="filter-row" id="filterRow"></div>
@@ -293,7 +299,7 @@
       <div class="history-head">
         <div>
           <p class="eyebrow">Recent Uploads</p>
-          <h3>Recent receipt activity</h3>
+          <h3>Your latest receipt moments</h3>
         </div>
         <div class="history-head-actions">
           <button class="ghost-link ghost-button" id="historyDelete" type="button">Delete Period Data</button>
@@ -301,8 +307,8 @@
         </div>
       </div>
       <p class="history-copy">
-        Keep a quick local record of what you recently uploaded from this browser, then remove
-        local or stored receipt history when you want a clean dashboard again.
+        Keep a playful scrollback of what you uploaded from this browser, then clear local or
+        stored history whenever you want a fresh board again.
       </p>
       <div class="history-range-shell">
         <label class="field history-field">
@@ -329,7 +335,7 @@
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260322a"></script>
-    <script src="./app.js?v=20260322a" defer></script>
+    <script src="./config.js?v=20260322c"></script>
+    <script src="./app.js?v=20260322c" defer></script>
   </body>
 </html>
