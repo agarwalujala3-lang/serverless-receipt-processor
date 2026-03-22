@@ -1179,9 +1179,9 @@ function renderSpotlight() {
   elements.spotlightFacts.innerHTML = facts
     .map(
       ([label, value]) => `
-        <article class="spotlight-stat">
-          <span>${label}</span>
-          <strong>${value}</strong>
+        <article class="spotlight-stat${label === "Operator" || label === "File" ? " spotlight-stat--wrap" : ""}">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(String(value))}</strong>
         </article>
       `
     )

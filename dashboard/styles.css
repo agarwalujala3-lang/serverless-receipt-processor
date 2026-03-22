@@ -718,6 +718,7 @@ body.cursor-active button {
 
 .spotlight-stat {
   position: relative;
+  min-width: 0;
   padding: 1rem;
   border-radius: 22px;
   border: 1px solid rgba(122, 164, 213, 0.16);
@@ -736,6 +737,14 @@ body.cursor-active button {
   display: block;
   margin-top: 0.55rem;
   font-size: 1.05rem;
+  line-height: 1.32;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.spotlight-stat--wrap strong {
+  font-size: 0.98rem;
 }
 
 .flip-grid {
