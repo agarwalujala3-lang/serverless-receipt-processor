@@ -2588,6 +2588,20 @@ function initCursorFX() {
   requestAnimationFrame(tick);
 }
 
+function initTopbarScrollFX() {
+  const topbar = document.querySelector(".topbar");
+  if (!topbar) {
+    return;
+  }
+
+  const syncTopbar = () => {
+    document.body.classList.toggle("topbar-condensed", window.scrollY > 28);
+  };
+
+  syncTopbar();
+  window.addEventListener("scroll", syncTopbar, { passive: true });
+}
+
 function formatMonthLabel(value) {
   if (!value || value === "__all") {
     return "All Months";
@@ -2611,6 +2625,7 @@ bindHistoryControls();
 bindArchiveControls();
 renderUploadHistory();
 setArchiveVisibility(false);
+initTopbarScrollFX();
 initCursorFX();
 window.addEventListener("beforeunload", clearPreviewObjectUrl);
 loadDashboard().catch((error) => {
