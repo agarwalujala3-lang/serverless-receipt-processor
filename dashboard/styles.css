@@ -2549,3 +2549,113 @@ body.cursor-hover .cursor-ring {
     align-items: flex-start;
   }
 }
+
+/* Focused polish pass */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  margin-bottom: 0.35rem;
+  backdrop-filter: blur(20px);
+  background: linear-gradient(180deg, rgba(18, 6, 25, 0.92), rgba(18, 6, 25, 0.62), transparent);
+}
+
+.topbar-copy {
+  gap: 0.7rem;
+}
+
+.topbar-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.topbar-pills span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.78rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff7ff;
+  font-size: 0.84rem;
+  box-shadow: 0 10px 20px rgba(10, 1, 14, 0.12);
+}
+
+.hero-grid {
+  align-content: start;
+}
+
+.hero-grid .glass-card {
+  min-height: 132px;
+}
+
+.upload-actions-row {
+  gap: 0.75rem;
+}
+
+.upload-helper {
+  max-width: 52ch;
+}
+
+.spotlight-facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.history-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-bottom: 0.9rem;
+  background: linear-gradient(180deg, rgba(34, 12, 47, 0.98), rgba(34, 12, 47, 0.72), transparent);
+}
+
+.table-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(31, 11, 42, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.cursor-orb::after {
+  content: "✦";
+}
+
+body.cursor-cta .cursor-orb {
+  transform: scale(1.38);
+  background: radial-gradient(circle at 30% 30%, #fffdf3, #ffd84d 42%, #ff8a5b 100%);
+}
+
+body.cursor-cta .cursor-orb::after {
+  content: "🧾";
+  font-size: 9px;
+}
+
+body.cursor-cta .cursor-ring {
+  transform: scale(1.55);
+  border-color: rgba(255, 216, 77, 0.62);
+  box-shadow:
+    0 0 42px rgba(255, 216, 77, 0.26),
+    0 0 26px rgba(255, 138, 91, 0.22);
+}
+
+@media (max-width: 900px) {
+  .spotlight-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    position: relative;
+    backdrop-filter: none;
+    background: none;
+  }
+
+  .topbar-pills,
+  .spotlight-facts {
+    grid-template-columns: 1fr;
+  }
+}

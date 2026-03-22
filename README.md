@@ -4,7 +4,7 @@ ReceiptPulse is a serverless receipt intelligence platform built on AWS. It turn
 
 ## Live Demo
 
-- Frontend: [https://d2ijsg7huf2h2p.cloudfront.net/?v=20260322c](https://d2ijsg7huf2h2p.cloudfront.net/?v=20260322c)
+- Frontend: [https://d2ijsg7huf2h2p.cloudfront.net/?v=20260322d](https://d2ijsg7huf2h2p.cloudfront.net/?v=20260322d)
 - API root: [https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/](https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/)
 - Health check: [https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/health](https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/health)
 

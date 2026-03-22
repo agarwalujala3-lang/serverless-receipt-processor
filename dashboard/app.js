@@ -867,7 +867,7 @@ function renderUploadHistory() {
   }
 
   if (elements.historyToggle) {
-    elements.historyToggle.textContent = `Upload History (${uploadHistory.length})`;
+    elements.historyToggle.textContent = `Past Uploads (${uploadHistory.length})`;
   }
   if (elements.historyDelete) {
     elements.historyDelete.disabled = !dashboardData?.receipts?.length;
@@ -1375,11 +1375,17 @@ function bindGlowTargets() {
       element.addEventListener("pointerenter", () => {
         element.classList.add("is-hovered");
         document.body.classList.add("cursor-hover");
+        if (element.matches("button, a, .primary-button, .secondary-button, .ghost-link, .filter-chip")) {
+          document.body.classList.add("cursor-cta");
+        } else {
+          document.body.classList.remove("cursor-cta");
+        }
       });
 
       element.addEventListener("pointerleave", () => {
         element.classList.remove("is-hovered");
         document.body.classList.remove("cursor-hover");
+        document.body.classList.remove("cursor-cta");
       });
     });
 }
