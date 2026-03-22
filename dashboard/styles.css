@@ -2791,6 +2791,45 @@ body::after {
   animation-duration: 10s;
 }
 
+.fun-tags span {
+  color: transparent;
+  position: relative;
+}
+
+.fun-tags span::after {
+  color: #eef6fb;
+  font-size: 0.88rem;
+}
+
+.fun-tags span:nth-child(1)::after {
+  content: "\1F35C  Food";
+}
+
+.fun-tags span:nth-child(2)::after {
+  content: "\1F6CD\00A0 Shopping";
+}
+
+.fun-tags span:nth-child(3)::after {
+  content: "\26A1  Electricity";
+}
+
+.fun-tags span:nth-child(4)::after {
+  content: "\2708\00A0 Travel";
+}
+
+.hero-grid .glass-card:nth-child(3) p {
+  font-size: 0;
+  line-height: 0;
+}
+
+.hero-grid .glass-card:nth-child(3) p::before {
+  content: "Call a receipt \"Electricity\" and its icon, chart color, and receipt tag all switch to that label instantly.";
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.62;
+  color: #aebbc7;
+}
+
 .primary-button {
   color: #07161a;
   background: linear-gradient(135deg, #74d2c9, #5b9be3);
