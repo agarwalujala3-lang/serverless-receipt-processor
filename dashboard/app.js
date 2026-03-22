@@ -365,6 +365,7 @@ const FALLBACK_DASHBOARD = {
 const elements = {
   cursorOrb: document.querySelector("#cursorOrb"),
   cursorRing: document.querySelector("#cursorRing"),
+  dashboardPeriodSelect: document.querySelector("#dashboardPeriodSelect"),
   metricsGrid: document.querySelector("#metricsGrid"),
   categoryChart: document.querySelector("#categoryChart"),
   vendorList: document.querySelector("#vendorList"),
@@ -422,12 +423,14 @@ const elements = {
 };
 
 let dashboardData = null;
+let activeDashboardView = null;
 let activeFilter = "ALL";
 let apiBase = "";
 let uploadHistory = loadUploadHistory();
 let previewObjectUrl = "";
 let latestPreview = null;
 let archiveOpen = false;
+let selectedDashboardPeriod = "all";
 let selectedExpenseMonth = "";
 let donutRefreshTimer = 0;
 let panelRefreshTimer = 0;
@@ -704,7 +707,187 @@ function adaptSnapshotPayload(snapshot) {
   return adapted;
 }
 
+function getReceiptDate(receipt) {
+  if (receipt?.processedAt) {
+    const processed = new Date(receipt.processedAt);
+    if (!Number.isNaN(processed.getTime())) {
+      return processed;
+    }
+  }
+
+  if (receipt?.expenseMonth && /^\d{4}-\d{2}$/.test(receipt.expenseMonth)) {
+    return new Date(`${receipt.expenseMonth}-01T00:00:00`);
+  }
+
+  return new Date(0);
+}
+
+function getReferenceDate(receipts) {
+  const timestamps = receipts
+    .map((receipt) => getReceiptDate(receipt).getTime())
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (!timestamps.length) {
+    return new Date();
+  }
+
+  return new Date(Math.max(...timestamps));
+}
+
+function matchesDashboardPeriod(receipt, period, referenceDate) {
+  if (period === "all") {
+    return true;
+  }
+
+  const receiptDate = getReceiptDate(receipt);
+  if (Number.isNaN(receiptDate.getTime()) || receiptDate.getTime() <= 0) {
+    return false;
+  }
+
+  const sameMonth =
+    receiptDate.getFullYear() === referenceDate.getFullYear() &&
+    receiptDate.getMonth() === referenceDate.getMonth();
+
+  if (period === "month") {
+    return sameMonth;
+  }
+
+  if (period === "year") {
+    return receiptDate.getFullYear() === referenceDate.getFullYear();
+  }
+
+  const monthDistance =
+    (referenceDate.getFullYear() - receiptDate.getFullYear()) * 12 +
+    (referenceDate.getMonth() - receiptDate.getMonth());
+
+  if (period === "quarter") {
+    return monthDistance >= 0 && monthDistance < 3;
+  }
+
+  if (period === "half") {
+    return monthDistance >= 0 && monthDistance < 6;
+  }
+
+  return true;
+}
+
+function buildSummaryFromReceipts(receipts) {
+  const totalSpend = receipts.reduce((sum, receipt) => sum + Number(receipt.totalAmount || 0), 0);
+  const receiptCount = receipts.length;
+  const averageConfidence = receiptCount
+    ? receipts.reduce((sum, receipt) => sum + Number(receipt.confidenceScore || 0), 0) / receiptCount
+    : 0;
+  const autoApprovedCount = receipts.filter((receipt) => receipt.reviewStatus === "AUTO_APPROVED").length;
+  const needsReviewCount = receipts.filter((receipt) => receipt.reviewStatus === "NEEDS_REVIEW").length;
+  const duplicateCount = receipts.filter((receipt) => receipt.reviewStatus === "DUPLICATE").length;
+
+  return {
+    receiptCount,
+    totalSpend,
+    averageConfidence,
+    autoApprovedCount,
+    needsReviewCount,
+    duplicateCount,
+  };
+}
+
+function buildTopVendorsFromReceipts(receipts) {
+  const totals = new Map();
+
+  receipts.forEach((receipt) => {
+    const vendor = receipt.vendor || "Unknown Vendor";
+    const existing = totals.get(vendor) || { vendor, amount: 0, share: 0 };
+    existing.amount += Number(receipt.totalAmount || 0);
+    totals.set(vendor, existing);
+  });
+
+  const rows = Array.from(totals.values()).sort((left, right) => right.amount - left.amount);
+  const totalSpend = rows.reduce((sum, item) => sum + item.amount, 0) || 1;
+  return rows.slice(0, 6).map((item) => ({
+    ...item,
+    share: Number(((item.amount / totalSpend) * 100).toFixed(1)),
+  }));
+}
+
+function buildMonthlyTrendFromReceipts(receipts) {
+  const grouped = new Map();
+
+  receipts.forEach((receipt) => {
+    const month = receipt.expenseMonth && receipt.expenseMonth !== "--"
+      ? receipt.expenseMonth
+      : `${getReceiptDate(receipt).getFullYear()}-${String(getReceiptDate(receipt).getMonth() + 1).padStart(2, "0")}`;
+    const existing = grouped.get(month) || { month, amount: 0, count: 0 };
+    existing.amount += Number(receipt.totalAmount || 0);
+    existing.count += 1;
+    grouped.set(month, existing);
+  });
+
+  return Array.from(grouped.values()).sort((left, right) => left.month.localeCompare(right.month));
+}
+
+function buildReviewQueueFromReceipts(receipts) {
+  return receipts
+    .filter((receipt) => receipt.reviewStatus !== "AUTO_APPROVED")
+    .map((receipt) => ({
+      ...receipt,
+      reasons:
+        receipt.reviewReasons && receipt.reviewReasons.length
+          ? receipt.reviewReasons
+          : ["Receipt needs one more manual check before it is treated as posted spend."],
+    }))
+    .sort((left, right) => getReceiptDate(right) - getReceiptDate(left));
+}
+
+function formatDashboardPeriodLabel(period) {
+  switch (period) {
+    case "month":
+      return "this month";
+    case "quarter":
+      return "the last 3 months";
+    case "half":
+      return "the last 6 months";
+    case "year":
+      return "this year";
+    default:
+      return "all time";
+  }
+}
+
+function buildRiskHeadlineForPeriod(summary) {
+  if (!summary.receiptCount) {
+    return "No receipts match this time range yet, so the dashboard is waiting for fresh spend data.";
+  }
+
+  if (summary.needsReviewCount) {
+    return `${summary.needsReviewCount} receipt${summary.needsReviewCount === 1 ? "" : "s"} still need review in ${formatDashboardPeriodLabel(selectedDashboardPeriod)}.`;
+  }
+
+  return `Spending insight for ${formatDashboardPeriodLabel(selectedDashboardPeriod)} is clean and ready to review.`;
+}
+
+function buildDashboardView() {
+  const receipts = dashboardData?.receipts || [];
+  const referenceDate = getReferenceDate(receipts);
+  const filteredReceipts = receipts.filter((receipt) =>
+    matchesDashboardPeriod(receipt, selectedDashboardPeriod, referenceDate)
+  );
+  const summary = buildSummaryFromReceipts(filteredReceipts);
+
+  return {
+    receipts: filteredReceipts,
+    summary,
+    topVendors: buildTopVendorsFromReceipts(filteredReceipts),
+    reviewQueue: buildReviewQueueFromReceipts(filteredReceipts),
+    monthlyTrend: buildMonthlyTrendFromReceipts(filteredReceipts),
+    heroHeadline: buildRiskHeadlineForPeriod(summary),
+  };
+}
+
 function renderDashboard() {
+  activeDashboardView = buildDashboardView();
+  if (elements.dashboardPeriodSelect) {
+    elements.dashboardPeriodSelect.value = selectedDashboardPeriod;
+  }
   renderOpsStrip();
   renderUploadTimeline();
   renderSpotlight();
@@ -719,7 +902,7 @@ function renderDashboard() {
   renderFilters();
   renderReceipts();
   setArchiveVisibility(archiveOpen);
-  elements.riskHeadline.textContent = dashboardData.heroHeadline;
+  elements.riskHeadline.textContent = activeDashboardView?.heroHeadline || dashboardData.heroHeadline;
   syncUploadMotion();
   bindInteractiveFX();
 }
@@ -729,7 +912,7 @@ function renderOpsStrip() {
     return;
   }
 
-  const summary = dashboardData.summary || {};
+  const summary = activeDashboardView?.summary || buildSummaryFromReceipts([]);
   const total = Math.max(Number(summary.receiptCount || 0), 1);
   const cards = [
     {
@@ -1103,37 +1286,38 @@ function renderUploadHistory() {
 }
 
 function renderMetrics() {
+  const summary = activeDashboardView?.summary || buildSummaryFromReceipts([]);
   const metrics = [
     {
       label: "Receipts Processed",
-      value: dashboardData.summary.receiptCount,
+      value: summary.receiptCount,
       suffix: "",
     },
     {
       label: "Total Spend Captured",
-      value: dashboardData.summary.totalSpend,
+      value: summary.totalSpend,
       prefix: "$",
       decimals: 2,
     },
     {
       label: "OCR Confidence",
-      value: dashboardData.summary.averageConfidence,
+      value: summary.averageConfidence,
       suffix: "%",
       decimals: 1,
     },
     {
       label: "Posted Cleanly",
-      value: dashboardData.summary.autoApprovedCount,
+      value: summary.autoApprovedCount,
       suffix: "",
     },
     {
       label: "Needs Review",
-      value: dashboardData.summary.needsReviewCount,
+      value: summary.needsReviewCount,
       suffix: "",
     },
     {
       label: "Duplicate Alerts",
-      value: dashboardData.summary.duplicateCount,
+      value: summary.duplicateCount,
       suffix: "",
     },
   ];
@@ -1156,7 +1340,7 @@ function renderMetrics() {
 }
 
 function renderCategoryChart() {
-  const grouped = groupReceiptsByVisualLabel(dashboardData.receipts || []);
+  const grouped = groupReceiptsByVisualLabel(activeDashboardView?.receipts || []);
 
   if (!grouped.length) {
     elements.categoryChart.innerHTML =
@@ -1183,16 +1367,19 @@ function renderCategoryChart() {
 }
 
 function renderVendors() {
-  if (!dashboardData.topVendors.length) {
+  const topVendors = activeDashboardView?.topVendors || [];
+  const scopedReceipts = activeDashboardView?.receipts || [];
+
+  if (!topVendors.length) {
     elements.vendorList.innerHTML =
-      '<p class="muted">Vendor concentration appears once receipts are processed.</p>';
+      '<p class="muted">Vendor concentration appears once receipts are available inside this range.</p>';
     return;
   }
 
-  elements.vendorList.innerHTML = dashboardData.topVendors
+  elements.vendorList.innerHTML = topVendors
     .map((vendor) => {
       const matchingReceipt =
-        (dashboardData.receipts || []).find((receipt) => receipt.vendor === vendor.vendor) || vendor;
+        scopedReceipts.find((receipt) => receipt.vendor === vendor.vendor) || vendor;
       const theme = getReceiptTheme(matchingReceipt);
       return `
         <div class="vendor-row" style="${getRowThemeVars(theme)}">
@@ -1225,12 +1412,14 @@ function renderWorkflow() {
 }
 
 function renderQueue() {
-  if (!dashboardData.reviewQueue.length) {
-    elements.queueList.innerHTML = '<p class="muted">No receipts are waiting for review.</p>';
+  const reviewQueue = activeDashboardView?.reviewQueue || [];
+
+  if (!reviewQueue.length) {
+    elements.queueList.innerHTML = '<p class="muted">No receipts are waiting for review in this range.</p>';
     return;
   }
 
-  elements.queueList.innerHTML = dashboardData.reviewQueue
+  elements.queueList.innerHTML = reviewQueue
     .map((receipt) => {
       const theme = getReceiptTheme(receipt);
       const displayLabel = getReceiptDisplayLabel(receipt);
@@ -1258,9 +1447,12 @@ function renderTrend() {
     return;
   }
 
-  if (!dashboardData.monthlyTrend.length) {
+  const monthlyTrend = activeDashboardView?.monthlyTrend || [];
+  const scopedReceipts = activeDashboardView?.receipts || [];
+
+  if (!monthlyTrend.length) {
     elements.trendBars.innerHTML =
-      '<p class="muted">Monthly throughput appears once receipts reach storage.</p>';
+      '<p class="muted">Monthly throughput appears once receipts exist in this time range.</p>';
     elements.expenseMonthSelect.innerHTML = '<option value="">No months yet</option>';
     elements.expenseMonthSelect.disabled = true;
     elements.expenseDonut.classList.add("expense-donut-empty");
@@ -1278,7 +1470,7 @@ function renderTrend() {
 
   const availableMonths = Array.from(
     new Set(
-      (dashboardData.receipts || [])
+      scopedReceipts
         .map((receipt) => receipt.expenseMonth)
         .filter((month) => month && month !== "--")
     )
@@ -1303,8 +1495,8 @@ function renderTrend() {
     )
     .join("");
 
-  const maxAmount = Math.max(...dashboardData.monthlyTrend.map((item) => item.amount), 1);
-  elements.trendBars.innerHTML = dashboardData.monthlyTrend
+  const maxAmount = Math.max(...monthlyTrend.map((item) => item.amount), 1);
+  elements.trendBars.innerHTML = monthlyTrend
     .map(
       (item) => `
         <div class="trend-bar ${item.month === selectedExpenseMonth ? "trend-bar-active" : ""}">
@@ -1342,7 +1534,7 @@ function renderFilters() {
 }
 
 function renderReceipts() {
-  const rows = dashboardData.receipts.filter((receipt) =>
+  const rows = (activeDashboardView?.receipts || []).filter((receipt) =>
     activeFilter === "ALL" ? true : receipt.reviewStatus === activeFilter
   );
 
@@ -2127,6 +2319,14 @@ function toggleStoredDeleteBusy(isBusy) {
 }
 
 function bindArchiveControls() {
+  if (elements.dashboardPeriodSelect && elements.dashboardPeriodSelect.dataset.bound !== "true") {
+    elements.dashboardPeriodSelect.dataset.bound = "true";
+    elements.dashboardPeriodSelect.addEventListener("change", (event) => {
+      selectedDashboardPeriod = event.target.value;
+      renderDashboard();
+    });
+  }
+
   if (elements.archiveToggle && elements.archiveToggle.dataset.bound !== "true") {
     elements.archiveToggle.dataset.bound = "true";
     elements.archiveToggle.addEventListener("click", () => {
@@ -2170,7 +2370,7 @@ function setArchiveVisibility(isOpen, scrollIntoView = false) {
 }
 
 function renderExpenseDonut() {
-  const visibleReceipts = (dashboardData.receipts || []).filter((receipt) => {
+  const visibleReceipts = (activeDashboardView?.receipts || []).filter((receipt) => {
     if (selectedExpenseMonth === "__all") {
       return true;
     }

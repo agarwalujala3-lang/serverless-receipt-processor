@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse is a polished personal receipt app that reads your bills, sorts spending automatically, and turns uploads into clean daily-use insights."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260322f" />
+    <link rel="stylesheet" href="./styles.css?v=20260322g" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -29,6 +29,18 @@
           <span>Auto category icons</span>
           <span>Your label wins</span>
           <span>Instant spend charts</span>
+        </div>
+        <div class="topbar-range">
+          <label class="select-shell">
+            <span>Dashboard Range</span>
+            <select class="month-select period-select" id="dashboardPeriodSelect" aria-label="Dashboard time range">
+              <option value="all">All time</option>
+              <option value="month">This month</option>
+              <option value="quarter">Last 3 months</option>
+              <option value="half">Last 6 months</option>
+              <option value="year">This year</option>
+            </select>
+          </label>
         </div>
       </div>
       <div class="topbar-actions">
@@ -298,7 +310,10 @@
               <p class="eyebrow">Monthly Summary</p>
               <h3>Track your spend and receipt flow over time</h3>
             </div>
-            <select class="month-select" id="expenseMonthSelect" aria-label="Expense month selector"></select>
+            <label class="select-shell chart-select-shell">
+              <span>Pie Chart Range</span>
+              <select class="month-select" id="expenseMonthSelect" aria-label="Expense month selector"></select>
+            </label>
           </div>
           <div class="trend-shell">
             <div id="trendBars" class="trend-bars"></div>
@@ -381,7 +396,7 @@
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260322f"></script>
-    <script src="./app.js?v=20260322f" defer></script>
+    <script src="./config.js?v=20260322g"></script>
+    <script src="./app.js?v=20260322g" defer></script>
   </body>
 </html>
