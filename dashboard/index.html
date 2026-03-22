@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ReceiptPulse Console</title>
+    <title>ReceiptPulse</title>
     <meta
       name="description"
-      content="ReceiptPulse Console showcases a serverless receipt intelligence pipeline with review automation, analytics, and cloud-native expense visibility."
+      content="ReceiptPulse is an expense tracking dashboard that captures receipts, extracts spend data automatically, and keeps finance teams on top of review, trends, and monthly totals."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260321h" />
+    <link rel="stylesheet" href="./styles.css?v=20260322a" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -19,11 +19,11 @@
 
     <header class="topbar">
       <div class="topbar-copy">
-        <p class="eyebrow">ReceiptPulse Console</p>
-        <h1>Live serverless expense operations.</h1>
+        <p class="eyebrow">ReceiptPulse</p>
+        <h1>Expense tracking that reads receipts for you.</h1>
         <p class="topbar-text">
-          Upload the receipt you choose from your own device, send it to S3, and watch the live
-          processing result appear before it joins the stored archive.
+          Capture receipts from your own device, let the pipeline extract totals and vendors, then
+          review spend, exceptions, and history from one finance-ready workspace.
         </p>
       </div>
       <div class="topbar-actions">
@@ -38,7 +38,7 @@
         >
           Custom Domain
         </a>
-        <a class="ghost-link" href="https://github.com/agarwalujala3-lang/ReceiptPulse" target="_blank" rel="noreferrer">Architecture Notes</a>
+        <a class="ghost-link" href="https://github.com/agarwalujala3-lang/ReceiptPulse" target="_blank" rel="noreferrer">GitHub Repo</a>
       </div>
     </header>
 
@@ -46,12 +46,12 @@
       <section class="control-grid">
         <section class="hero panel">
           <div class="hero-copy">
-            <p class="eyebrow">From upload to finance-ready insight</p>
-            <h2>Drop in a receipt and let AI extract, classify, score, and route it automatically.</h2>
+            <p class="eyebrow">Expense Inbox</p>
+            <h2>Upload receipts, capture spend automatically, and keep monthly expenses organized.</h2>
             <p class="hero-text">
-              ReceiptPulse now works like a live operator console. Upload receipts from this page,
-              watch the processing stages move, and inspect the extracted result as soon as the
-              serverless pipeline finishes.
+              Built for expense tracking rather than a static demo. Finance teams can upload a
+              receipt, monitor extraction, inspect the latest result, and work through review items
+              without leaving the dashboard.
             </p>
             <div class="hero-actions">
               <button class="primary-button" id="heroUploadTrigger" type="button">Upload Receipt</button>
@@ -60,32 +60,32 @@
           </div>
           <div class="hero-grid">
             <article class="glass-card spotlight">
-              <span class="mini-label">Quality Gate</span>
-              <strong id="riskHeadline">Low-confidence receipts routed automatically.</strong>
-              <p>Confidence scoring, duplicate detection, and review status keep the pipeline trustworthy.</p>
+              <span class="mini-label">Review Control</span>
+              <strong id="riskHeadline">Low-confidence receipts are held before they affect totals.</strong>
+              <p>Confidence scoring, duplicate detection, and routing keep your expense ledger clean.</p>
             </article>
             <article class="glass-card">
-              <span class="mini-label">Cloud Flow</span>
+              <span class="mini-label">Posting Flow</span>
               <div class="pipeline">
-                <span>S3 Intake</span>
-                <span>Textract</span>
-                <span>AI Rules</span>
-                <span>DynamoDB</span>
-                <span>Exports</span>
+                <span>Upload</span>
+                <span>Extract</span>
+                <span>Review</span>
+                <span>Store</span>
+                <span>Report</span>
               </div>
             </article>
             <article class="glass-card">
-              <span class="mini-label">Operator View</span>
+              <span class="mini-label">Team Dashboard</span>
               <p>
-                One screen for upload, extraction status, review queue, and spend analytics instead
-                of a hidden backend demo.
+                One workspace for upload, receipt status, review decisions, spend mix, and monthly
+                reporting.
               </p>
             </article>
             <article class="glass-card">
-              <span class="mini-label">Launch Ready</span>
+              <span class="mini-label">Month-End Ready</span>
               <p>
-                CloudFront-hosted frontend, serverless API backend, and a custom-domain path ready
-                for final branding.
+                Historical archive, review states, category charts, and exports keep finance work
+                ready for month-end reconciliation.
               </p>
             </article>
           </div>
@@ -95,7 +95,7 @@
           <div class="section-heading section-heading-tight">
             <div>
               <p class="eyebrow">Receipt Intake</p>
-              <h3>Upload a receipt and trigger the full pipeline</h3>
+              <h3>Add a new expense receipt</h3>
             </div>
             <span class="status-tag status-auto-approved upload-ready-pill">Live</span>
           </div>
@@ -168,7 +168,7 @@
           <div class="section-heading section-heading-tight">
             <div>
               <p class="eyebrow">Your Current Upload</p>
-              <h3>Current upload result</h3>
+              <h3>Latest processed expense</h3>
             </div>
           </div>
           <div class="spotlight-shell">
@@ -188,7 +188,7 @@
           <div class="section-heading section-heading-tight">
             <div>
               <p class="eyebrow">How It Works</p>
-              <h3>Flip the system cards</h3>
+              <h3>How the expense workflow fits together</h3>
             </div>
           </div>
           <div class="flip-grid" id="flipGrid"></div>
@@ -201,8 +201,8 @@
         <article class="panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Category Spend</p>
-              <h3>Where the money is going</h3>
+              <p class="eyebrow">Spending Mix</p>
+              <h3>Where this period's spend is concentrated</h3>
             </div>
           </div>
           <div id="categoryChart" class="stack-chart"></div>
@@ -211,8 +211,8 @@
         <article class="panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Vendor Heatmap</p>
-              <h3>Top vendors by processed value</h3>
+              <p class="eyebrow">Merchant Overview</p>
+              <h3>Top merchants by processed spend</h3>
             </div>
           </div>
           <div id="vendorList" class="vendor-list"></div>
@@ -222,8 +222,8 @@
       <section class="panel">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">System Story</p>
-            <h3>Architecture that both recruiters and engineers can follow</h3>
+            <p class="eyebrow">Processing Pipeline</p>
+            <h3>What happens after a receipt is uploaded</h3>
           </div>
         </div>
         <div class="architecture-track" id="workflowTrack"></div>
@@ -234,7 +234,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Review Queue</p>
-              <h3>Receipts that need human attention</h3>
+              <h3>Receipts waiting for a finance decision</h3>
             </div>
           </div>
           <div id="queueList" class="queue-list"></div>
@@ -243,8 +243,8 @@
         <article class="panel">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Monthly Trend</p>
-              <h3>Processing throughput over time</h3>
+              <p class="eyebrow">Monthly Spend</p>
+              <h3>Track receipt volume and expense totals over time</h3>
             </div>
             <select class="month-select" id="expenseMonthSelect" aria-label="Expense month selector"></select>
           </div>
@@ -261,8 +261,8 @@
       <section class="panel table-panel archive-collapsed" id="receiptsTable">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Stored Receipt Archive</p>
-            <h3>Searchable historical receipt intelligence</h3>
+            <p class="eyebrow">Receipt Archive</p>
+            <h3>Search, filter, and clean up stored expenses</h3>
           </div>
           <div class="archive-actions">
             <div class="filter-row" id="filterRow"></div>
@@ -293,7 +293,7 @@
       <div class="history-head">
         <div>
           <p class="eyebrow">Recent Uploads</p>
-          <h3>Receipt intake history</h3>
+          <h3>Recent receipt activity</h3>
         </div>
         <div class="history-head-actions">
           <button class="ghost-link ghost-button" id="historyDelete" type="button">Delete Period Data</button>
@@ -301,8 +301,8 @@
         </div>
       </div>
       <p class="history-copy">
-        This panel keeps the most recent browser-side uploads so a recruiter or reviewer can see
-        the system behaving like a product, not a static demo.
+        Keep a quick local record of what you recently uploaded from this browser, then remove
+        local or stored receipt history when you want a clean dashboard again.
       </p>
       <div class="history-range-shell">
         <label class="field history-field">
@@ -329,7 +329,7 @@
 
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260321h"></script>
-    <script src="./app.js?v=20260321h" defer></script>
+    <script src="./config.js?v=20260322a"></script>
+    <script src="./app.js?v=20260322a" defer></script>
   </body>
 </html>

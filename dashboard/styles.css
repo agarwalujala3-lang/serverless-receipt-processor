@@ -1453,6 +1453,342 @@ body.cursor-hover .cursor-ring {
   box-shadow: 0 16px 36px rgba(53, 217, 234, 0.14);
 }
 
+/* Expense tracker product theme overrides */
+:root {
+  --bg: #0f1713;
+  --panel: rgba(19, 30, 23, 0.92);
+  --panel-strong: rgba(17, 28, 21, 0.98);
+  --panel-border: rgba(146, 173, 154, 0.16);
+  --text: #eef5ef;
+  --muted: #99ab9d;
+  --accent: #79d18d;
+  --accent-strong: #2f9c57;
+  --accent-soft: rgba(121, 209, 141, 0.12);
+  --danger: #ff8f7c;
+  --warning: #f0c46a;
+  --success: #79d18d;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(62, 97, 74, 0.18), transparent 26%),
+    radial-gradient(circle at top right, rgba(25, 70, 48, 0.16), transparent 24%),
+    linear-gradient(180deg, #0b120e 0%, #101813 48%, #0f1713 100%);
+}
+
+.aurora,
+.grid-sheen {
+  display: none;
+}
+
+.topbar {
+  align-items: center;
+  padding: 1.25rem clamp(1.25rem, 4vw, 4rem) 0.35rem;
+}
+
+.topbar h1 {
+  max-width: 15ch;
+  font-size: clamp(1.9rem, 3.2vw, 2.8rem);
+  letter-spacing: -0.04em;
+}
+
+.topbar-text {
+  max-width: 66ch;
+  font-size: 0.96rem;
+  color: #aab7ac;
+}
+
+.status-pill,
+.ghost-link,
+.filter-chip {
+  background: rgba(255, 255, 255, 0.025);
+  border-color: rgba(146, 173, 154, 0.16);
+}
+
+.ghost-link {
+  color: #c8d5cb;
+}
+
+.panel {
+  border-radius: 24px;
+  border-color: rgba(146, 173, 154, 0.14);
+  background: linear-gradient(180deg, rgba(20, 30, 24, 0.95), rgba(16, 24, 19, 0.98));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.panel::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 34%);
+}
+
+.hero {
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 1.1rem;
+  padding: 1.45rem;
+}
+
+.hero::before,
+.dropzone::before,
+.spotlight::before {
+  display: none;
+}
+
+.hero-copy h2 {
+  max-width: 14ch;
+  font-size: clamp(2rem, 3.2vw, 3.05rem);
+  letter-spacing: -0.045em;
+}
+
+.hero-text {
+  font-size: 0.99rem;
+  color: #a8b7ac;
+}
+
+.primary-button,
+.secondary-button {
+  min-width: 164px;
+  padding: 0.92rem 1.1rem;
+  border-radius: 16px;
+}
+
+.primary-button {
+  color: #08100a;
+  background: linear-gradient(135deg, #8fe4a2, #5cbf78);
+  box-shadow: 0 14px 28px rgba(58, 135, 82, 0.22);
+}
+
+.secondary-button {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(146, 173, 154, 0.16);
+}
+
+.glass-card,
+.preview-stat,
+.timeline-step,
+.spotlight-stat,
+.vendor-row,
+.queue-item,
+.workflow-node,
+.legend-row,
+.history-item {
+  border-color: rgba(146, 173, 154, 0.14);
+  background: linear-gradient(180deg, rgba(24, 36, 28, 0.94), rgba(18, 28, 21, 0.96));
+  box-shadow: none;
+}
+
+.glass-card {
+  border-radius: 20px;
+}
+
+.mini-label,
+.eyebrow,
+.spotlight-kicker,
+.drop-kicker {
+  color: #8cd6a0;
+  letter-spacing: 0.16em;
+}
+
+.pipeline span {
+  background: rgba(121, 209, 141, 0.09);
+  border-color: rgba(121, 209, 141, 0.18);
+  color: #dbe8dd;
+}
+
+.upload-lab {
+  background: linear-gradient(180deg, rgba(18, 29, 22, 0.97), rgba(14, 23, 17, 0.99));
+}
+
+.upload-form,
+.upload-status-card,
+.spotlight-shell,
+.flip-grid,
+.stack-chart,
+.vendor-list,
+.queue-list,
+.trend-bars,
+.architecture-track,
+.table-wrap {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+
+.upload-preview-frame,
+.dropzone {
+  border-color: rgba(146, 173, 154, 0.16);
+  background: linear-gradient(180deg, rgba(18, 29, 22, 0.98), rgba(13, 21, 16, 0.98));
+}
+
+.dropzone {
+  min-height: 200px;
+  border-style: dashed;
+}
+
+.dropzone.is-dragging {
+  border-color: rgba(143, 228, 162, 0.72);
+  box-shadow: 0 18px 40px rgba(47, 156, 87, 0.16);
+}
+
+.text-input,
+.month-select {
+  border-color: rgba(146, 173, 154, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.text-input:focus,
+.month-select:focus {
+  outline: none;
+  border-color: rgba(121, 209, 141, 0.5);
+  box-shadow: 0 0 0 4px rgba(121, 209, 141, 0.09);
+}
+
+.timeline-active {
+  border-color: rgba(121, 209, 141, 0.26);
+  box-shadow: 0 12px 26px rgba(47, 156, 87, 0.12);
+}
+
+.timeline-dot,
+.workflow-step {
+  background: rgba(121, 209, 141, 0.1);
+  border-color: rgba(121, 209, 141, 0.18);
+  color: #98e0aa;
+}
+
+.metric-card {
+  padding: 1.1rem;
+}
+
+.metric-card strong,
+.ops-card strong,
+.spotlight-title {
+  letter-spacing: -0.04em;
+}
+
+.metric-card span,
+.ops-card span,
+.spotlight-narrative,
+.preview-empty p,
+.preview-pdf-card p,
+.drop-copy,
+.upload-helper,
+.history-copy,
+.history-note,
+.reason-list,
+.workflow-node p,
+.timeline-step p {
+  color: #9cad9f;
+}
+
+.ops-card {
+  background: linear-gradient(180deg, rgba(24, 36, 28, 0.96), rgba(18, 28, 21, 0.98));
+}
+
+.bar-track,
+.trend-track {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.bar-fill,
+.trend-fill {
+  background: linear-gradient(90deg, #3e9c5d, #8fe4a2);
+}
+
+.trend-bar-active {
+  background: rgba(121, 209, 141, 0.06);
+  border-color: rgba(121, 209, 141, 0.15);
+}
+
+.expense-donut {
+  background: conic-gradient(#7ad28f 0 40%, #4cac69 40% 72%, #d4a94d 72% 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 20px 48px rgba(0, 0, 0, 0.18);
+}
+
+.expense-donut::after {
+  background: linear-gradient(180deg, rgba(16, 24, 19, 0.98), rgba(14, 21, 16, 1));
+  box-shadow: inset 0 0 0 1px rgba(146, 173, 154, 0.12);
+}
+
+.status-auto-approved {
+  background: rgba(121, 209, 141, 0.12);
+}
+
+.status-needs-review,
+.status-duplicate {
+  background: rgba(255, 143, 124, 0.12);
+}
+
+.history-scrim {
+  background: rgba(5, 9, 7, 0.58);
+}
+
+.history-drawer {
+  border-left-color: rgba(146, 173, 154, 0.14);
+  background: linear-gradient(180deg, rgba(15, 23, 18, 0.98), rgba(11, 17, 13, 1));
+  box-shadow: -16px 0 52px rgba(0, 0, 0, 0.26);
+}
+
+.cursor-orb {
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  background: linear-gradient(135deg, rgba(148, 229, 166, 0.95), rgba(72, 152, 93, 0.85));
+  box-shadow:
+    0 0 18px rgba(72, 152, 93, 0.45),
+    0 0 34px rgba(72, 152, 93, 0.22);
+}
+
+.cursor-ring {
+  border-color: rgba(143, 228, 162, 0.28);
+  box-shadow: 0 0 28px rgba(72, 152, 93, 0.12);
+}
+
+body.cursor-hover .cursor-ring {
+  border-color: rgba(143, 228, 162, 0.52);
+}
+
+.panel.is-hovered,
+.glass-card.is-hovered,
+.vendor-row.is-hovered,
+.queue-item.is-hovered,
+.workflow-node.is-hovered,
+.ops-card.is-hovered,
+.spotlight-stat.is-hovered,
+.flip-card.is-hovered,
+.timeline-step.is-hovered,
+.dropzone.is-hovered,
+.metric-card.is-hovered,
+.primary-button:hover,
+.secondary-button:hover,
+.filter-chip:hover,
+.ghost-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(121, 209, 141, 0.22);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.2);
+}
+
+.panel.is-hovered::before,
+.glass-card.is-hovered::after,
+.vendor-row.is-hovered::after,
+.queue-item.is-hovered::after,
+.workflow-node.is-hovered::after,
+.ops-card.is-hovered::before,
+.spotlight-stat.is-hovered::before,
+.timeline-step.is-hovered::before,
+.dropzone.is-hovered::before,
+.metric-card.is-hovered::before {
+  opacity: 0.45;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.filter-chip:hover,
+.ghost-link:hover {
+  box-shadow: 0 12px 28px rgba(47, 156, 87, 0.12);
+}
+
 @keyframes sweep {
   0% {
     transform: translateX(-22%) rotate(12deg);

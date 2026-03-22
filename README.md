@@ -1,6 +1,12 @@
 # ReceiptPulse
 
-ReceiptPulse is a serverless receipt intelligence platform built on AWS. It turns uploaded receipts into structured expense records, flags risky submissions for review, detects duplicates, stores analytics-ready data in DynamoDB, exposes review and export APIs, and includes a polished dashboard for both portfolio demos and real operations.
+ReceiptPulse is a serverless receipt intelligence platform built on AWS. It turns uploaded receipts into structured expense records, flags risky submissions for review, detects duplicates, stores analytics-ready data in DynamoDB, exposes review and export APIs, and includes a polished expense-tracker dashboard for both portfolio demos and real operations.
+
+## Live Demo
+
+- Frontend: [https://d2ijsg7huf2h2p.cloudfront.net/?v=20260322a](https://d2ijsg7huf2h2p.cloudfront.net/?v=20260322a)
+- API root: [https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/](https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/)
+- Health check: [https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/health](https://xooa7yv1tf.execute-api.ap-south-1.amazonaws.com/health)
 
 ## What Makes This Stronger
 
@@ -8,7 +14,7 @@ The project now reads like a product instead of a single Lambda demo:
 
 - smart receipt enrichment with category, confidence, review status, and duplicate keys
 - review and analytics API for operations workflows
-- premium dashboard UI for technical and non-technical viewers
+- expense-tracker dashboard UI for technical and non-technical viewers
 - live browser upload console with preview, history drawer, and processing timeline
 - SAM template for backend deployment
 - Amplify build configuration for static frontend hosting
@@ -66,20 +72,20 @@ The project now reads like a product instead of a single Lambda demo:
 
 ### Dashboard
 
-The dashboard in [dashboard](./dashboard) is designed to look strong for both recruiters and engineers.
+The dashboard in [dashboard](./dashboard) is designed to feel like a real expense product instead of a study or architecture-only demo.
 
 It includes:
 
-- premium hero section
+- finance-style hero and overview
 - receipt upload with live preview
 - saved browser-side upload history drawer
 - success burst animation when a receipt clears the pipeline
 - animated metric counters
-- category spend bars
-- vendor spend heatmap
+- category spend bars and donut view
+- merchant spend overview
 - review queue
 - monthly trend visualization
-- architecture storytelling panel
+- pipeline summary panel
 - filterable receipt table
 
 By default it loads demo data. In live mode it reads the backend API from:

@@ -6,35 +6,35 @@ const MAX_HISTORY_ITEMS = 8;
 const HOW_IT_WORKS = [
   {
     eyebrow: "Flip Card 01",
-    frontTitle: "Upload Receipts",
-    frontBody: "Send PDFs or images into the pipeline directly from the browser.",
-    backTitle: "Signed Intake",
+    frontTitle: "Capture Expenses",
+    frontBody: "Upload receipt PDFs or images directly from the dashboard.",
+    backTitle: "Secure Intake",
     backBody:
-      "The console requests a presigned S3 upload URL, so the file goes straight into the intake bucket instead of through a web server.",
+      "ReceiptPulse requests a presigned S3 upload URL so files move straight into storage without routing through a traditional web server.",
   },
   {
     eyebrow: "Flip Card 02",
-    frontTitle: "AI Extraction",
-    frontBody: "Vendor, totals, dates, and lines are read automatically from each receipt.",
-    backTitle: "Textract AnalyzeExpense",
+    frontTitle: "Extract Key Fields",
+    frontBody: "Vendor, totals, dates, and receipt lines are read automatically.",
+    backTitle: "Expense Parsing",
     backBody:
-      "The backend uses Textract to convert unstructured receipt files into structured finance records for dashboards and exports.",
+      "Textract converts unstructured receipt files into structured expense data that can feed dashboards, review lists, and export workflows.",
   },
   {
     eyebrow: "Flip Card 03",
-    frontTitle: "Quality Gate",
-    frontBody: "Confidence checks and duplicate detection decide if a receipt can auto-flow.",
-    backTitle: "Trust Layer",
+    frontTitle: "Review Exceptions",
+    frontBody: "Confidence checks and duplicate detection decide what needs a human look.",
+    backTitle: "Control Layer",
     backBody:
-      "Low-confidence or duplicate receipts are routed into review states before they can affect spend reporting.",
+      "Low-confidence or duplicate receipts are held in review states before they can distort totals or appear as clean expense history.",
   },
   {
     eyebrow: "Flip Card 04",
-    frontTitle: "Operator Surface",
-    frontBody: "Upload, live status, analytics, and review queue all live in the same product view.",
-    backTitle: "Why It Feels Complete",
+    frontTitle: "Track Spend",
+    frontBody: "Uploads, status, review, archive, and spend mix live in one place.",
+    backTitle: "Finance Workspace",
     backBody:
-      "This turns the project from a hidden backend demo into a tool both non-technical and technical users can understand quickly.",
+      "That makes the project feel like a real expense product instead of a backend demo hidden behind technical infrastructure.",
   },
 ];
 const FALLBACK_DASHBOARD = {
@@ -99,35 +99,35 @@ const FALLBACK_DASHBOARD = {
   workflow: [
     {
       step: "01",
-      title: "Smart Intake",
+      title: "Receipt Intake",
       description:
-        "Receipts are uploaded to Amazon S3 with uploader metadata for downstream ownership and alerts.",
+        "Receipts are uploaded into Amazon S3 with uploader metadata for ownership, audit trail, and traceability.",
     },
     {
       step: "02",
-      title: "AI Extraction",
-      description: "Lambda uses Textract AnalyzeExpense to capture totals, vendor, date, and line items.",
+      title: "Field Extraction",
+      description: "Lambda uses Textract AnalyzeExpense to capture totals, merchant, date, and line items.",
     },
     {
       step: "03",
-      title: "Quality Gates",
+      title: "Review Rules",
       description:
-        "Confidence thresholds, duplicate keys, and missing-field checks assign auto-approve or review states.",
+        "Confidence thresholds, duplicate keys, and missing-field checks assign posted or needs-review states.",
     },
     {
       step: "04",
-      title: "Ops Storage",
+      title: "Expense Ledger",
       description:
-        "DynamoDB stores analytics-ready receipt records for dashboards, export workflows, and review actions.",
+        "DynamoDB stores analytics-ready expense records for dashboards, historical reporting, and cleanup actions.",
     },
     {
       step: "05",
-      title: "Action Layer",
-      description: "API endpoints and exports turn the pipeline into an operator-facing product surface.",
+      title: "Reporting Layer",
+      description: "API endpoints and exports turn the pipeline into an expense dashboard people can actually use.",
     },
   ],
   heroHeadline:
-    "Low-confidence and duplicate receipts are intercepted before they distort finance reporting.",
+    "Receipts that look risky are separated before they can affect spend reports or monthly totals.",
   receipts: [
     {
       receiptId: "rcpt-118",
@@ -412,28 +412,28 @@ function adaptApiPayload(analytics, receipts) {
     workflow: [
       {
         step: "01",
-        title: "Intake",
-        description: "Receipts land in S3 and metadata captures uploader ownership.",
+        title: "Receipt Intake",
+        description: "Receipts land in S3 and metadata captures who uploaded them.",
       },
       {
         step: "02",
-        title: "Extraction",
-        description: "Textract AnalyzeExpense parses totals, vendor, dates, and line items.",
+        title: "Field Extraction",
+        description: "Textract AnalyzeExpense parses totals, merchants, dates, and line items.",
       },
       {
         step: "03",
-        title: "Quality Gate",
-        description: "Confidence scoring and duplicate detection assign review status.",
+        title: "Review Rules",
+        description: "Confidence scoring and duplicate detection assign clean or review status.",
       },
       {
         step: "04",
-        title: "Persistence",
-        description: "Structured records are stored in DynamoDB with analytics-ready fields.",
+        title: "Expense Ledger",
+        description: "Structured records are stored in DynamoDB with analytics-ready finance fields.",
       },
       {
         step: "05",
-        title: "Ops Layer",
-        description: "API endpoints power dashboards, exports, and review updates.",
+        title: "Reporting Layer",
+        description: "API endpoints power dashboards, exports, cleanup, and review updates.",
       },
     ],
     heroHeadline:
@@ -475,35 +475,35 @@ function renderOpsStrip() {
   const total = Math.max(Number(summary.receiptCount || 0), 1);
   const cards = [
     {
-      label: "Auto-approval rate",
+      label: "Posted automatically",
       value: `${Math.round((Number(summary.autoApprovedCount || 0) / total) * 100)}%`,
-      detail: `${summary.autoApprovedCount || 0} receipts cleared the pipeline automatically.`,
+      detail: `${summary.autoApprovedCount || 0} receipts were clean enough to flow straight into tracked spend.`,
     },
     {
-      label: "Review pressure",
+      label: "Needs review",
       value: `${Math.round((Number(summary.needsReviewCount || 0) / total) * 100)}%`,
-      detail: `${summary.needsReviewCount || 0} receipts need manual attention.`,
+      detail: `${summary.needsReviewCount || 0} receipts still need a finance decision.`,
     },
     {
-      label: "Duplicate guard",
+      label: "Duplicate alerts",
       value: `${summary.duplicateCount || 0}`,
-      detail: "Potential repeats were caught before they affected reporting.",
+      detail: "Potential repeats were caught before they inflated the expense history.",
     },
     {
-      label: "Snapshot freshness",
+      label: "Dashboard freshness",
       value: formatFreshness(dashboardData.generatedAt),
-      detail: "How fresh the visible live data is right now.",
+      detail: "How current the numbers and archive view are right now.",
     },
     {
-      label: "Last pipeline cycle",
+      label: "Last receipt cycle",
       value: formatProcessingDuration(uploadState.durationMs),
       detail:
         uploadState.phase === "success"
-          ? "Measured from secure upload to the receipt appearing in the console."
-          : "Duration appears after the next live receipt is processed end to end.",
+          ? "Measured from upload start to the receipt appearing inside the dashboard."
+          : "Timing appears after the next uploaded receipt finishes processing.",
     },
     {
-      label: "Upload desk",
+      label: "Upload status",
       value: formatUploadPhase(uploadState.phase),
       detail: uploadState.message,
     },
@@ -528,11 +528,11 @@ function renderUploadTimeline() {
   }
 
   const steps = [
-    ["slot", "Secure Upload Slot", "Create a signed S3 upload session."],
-    ["transfer", "S3 Intake Transfer", "Move the file into the intake bucket."],
-    ["textract", "AI Extraction", "Read vendor, total, date, and line items."],
-    ["quality", "Quality Rules", "Run confidence checks and duplicate detection."],
-    ["stored", "Stored In Console", "Show the processed receipt in the live dashboard."],
+    ["slot", "Create Upload Slot", "Prepare a signed upload session for your receipt."],
+    ["transfer", "Store In S3", "Move the selected file into the intake bucket."],
+    ["textract", "Extract Fields", "Read merchant, total, date, and line items."],
+    ["quality", "Run Review Rules", "Check confidence and screen for duplicates."],
+    ["stored", "Update Dashboard", "Show the processed receipt in the live expense view."],
   ];
   const order = steps.map((step) => step[0]);
   const activeIndex =
@@ -581,12 +581,12 @@ function renderSpotlight() {
     elements.spotlightKicker.textContent = "Current upload";
     elements.spotlightTitle.textContent = "No receipt from this browser session yet.";
     elements.spotlightNarrative.textContent =
-      "Select a file from your device, upload it to S3, and this area will switch from an empty state to your own live processing result.";
+      "Select a file from your device, upload it to S3, and this area will switch into the latest processed expense summary for your own upload.";
     elements.spotlightFacts.innerHTML = "";
     return;
   }
 
-  elements.spotlightKicker.textContent = "Freshly processed upload";
+  elements.spotlightKicker.textContent = "Latest processed expense";
   elements.spotlightTitle.textContent = `${receipt.vendor} - ${formatLabel(receipt.reviewStatus)}`;
   elements.spotlightNarrative.textContent = buildSpotlightNarrative(receipt);
 
@@ -721,19 +721,19 @@ function renderMetrics() {
       suffix: "",
     },
     {
-      label: "Total Spend Mapped",
+      label: "Total Spend Captured",
       value: dashboardData.summary.totalSpend,
       prefix: "$",
       decimals: 2,
     },
     {
-      label: "Average Confidence",
+      label: "OCR Confidence",
       value: dashboardData.summary.averageConfidence,
       suffix: "%",
       decimals: 1,
     },
     {
-      label: "Auto Approved",
+      label: "Posted Cleanly",
       value: dashboardData.summary.autoApprovedCount,
       suffix: "",
     },
@@ -743,7 +743,7 @@ function renderMetrics() {
       suffix: "",
     },
     {
-      label: "Duplicate Signals",
+      label: "Duplicate Alerts",
       value: dashboardData.summary.duplicateCount,
       suffix: "",
     },
@@ -1012,16 +1012,16 @@ function metricDescription(label) {
   switch (label) {
     case "Receipts Processed":
       return "Multi-file ingestion with analytics-ready enrichment fields.";
-    case "Total Spend Mapped":
-      return "Structured totals available for exports and dashboards.";
-    case "Average Confidence":
-      return "Textract-derived score used for review routing.";
-    case "Auto Approved":
-      return "Receipts that cleared the rule engine without manual review.";
+    case "Total Spend Captured":
+      return "Structured totals ready for monthly reporting and cleanup decisions.";
+    case "OCR Confidence":
+      return "Extraction quality score used to decide whether receipts need review.";
+    case "Posted Cleanly":
+      return "Receipts that cleared the rule engine without manual intervention.";
     case "Needs Review":
-      return "Receipts flagged for low confidence or missing key data.";
-    case "Duplicate Signals":
-      return "Potential repeats detected before finance books them twice.";
+      return "Receipts flagged for low confidence, missing data, or exceptions.";
+    case "Duplicate Alerts":
+      return "Potential repeats detected before the same expense is counted twice.";
     default:
       return "";
   }
@@ -1035,7 +1035,7 @@ function buildSpotlightNarrative(receipt) {
     receipt.confidenceScore || 0
   ).toFixed(1)}% confidence score and routed to ${formatLabel(
     receipt.reviewStatus
-  ).toLowerCase()}.${reasons}`;
+  ).toLowerCase()} in the expense workflow.${reasons}`;
 }
 
 function formatLabel(value) {
