@@ -3801,3 +3801,198 @@ body.cursor-cta .cursor-ring {
     justify-items: stretch;
   }
 }
+
+/* Compact topbar and clearer controls */
+
+.topbar {
+  position: relative;
+  top: auto;
+  z-index: 5;
+  gap: 0.8rem 1.1rem;
+  margin-bottom: 0.1rem;
+  padding: 0.9rem clamp(1.25rem, 4vw, 3.2rem) 0.25rem;
+  backdrop-filter: blur(12px);
+}
+
+.topbar-copy {
+  gap: 0.4rem;
+}
+
+.topbar h1 {
+  max-width: 11ch;
+  font-size: clamp(1.55rem, 2.9vw, 2.45rem);
+}
+
+.topbar-text {
+  max-width: 44ch;
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.topbar-pills {
+  gap: 0.45rem;
+}
+
+.topbar-pills span {
+  padding: 0.38rem 0.72rem;
+  font-size: 0.8rem;
+}
+
+.topbar-range {
+  margin-top: 0.45rem;
+  max-width: 340px;
+}
+
+.topbar-actions {
+  align-self: center;
+  gap: 0.6rem;
+}
+
+.status-pill,
+.ghost-link {
+  padding: 0.68rem 0.9rem;
+}
+
+.select-shell span {
+  color: #dbe7f2;
+  font-weight: 600;
+}
+
+.month-select,
+.period-select {
+  color: #eff6fb;
+  background: linear-gradient(180deg, rgba(27, 35, 46, 0.98), rgba(21, 29, 38, 0.98));
+  border: 1px solid rgba(126, 150, 177, 0.24);
+}
+
+.month-select option,
+.period-select option {
+  color: #eef6fb;
+  background: #18212b;
+}
+
+.month-select:focus,
+.period-select:focus {
+  color: #ffffff;
+}
+
+/* Prevent upload motion copy overlap */
+
+.upload-motion-scene {
+  grid-template-areas:
+    "cloud cloud"
+    "receipt processing"
+    "ledger ledger";
+  min-height: 278px;
+  gap: 0.9rem 0.95rem;
+}
+
+.upload-motion-scene::before {
+  left: 24%;
+  top: 4.7rem;
+  bottom: 6.75rem;
+}
+
+.motion-cloud {
+  grid-area: cloud;
+}
+
+.motion-processing {
+  grid-area: processing;
+  margin-left: 0;
+  width: 100%;
+  align-self: stretch;
+}
+
+.motion-receipt,
+.motion-ledger {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.motion-receipt {
+  grid-area: receipt;
+  align-self: end;
+}
+
+.motion-ledger {
+  grid-area: ledger;
+  justify-self: end;
+  width: min(100%, 17rem);
+}
+
+.motion-receipt-copy strong,
+.motion-ledger-copy strong,
+.motion-processing-copy strong {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.motion-receipt-copy span,
+.motion-ledger-copy span,
+.motion-processing-copy span {
+  line-height: 1.38;
+}
+
+.motion-processing-copy {
+  gap: 0.24rem;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .topbar-actions {
+    justify-content: flex-start;
+  }
+
+  .upload-motion-scene {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "cloud"
+      "processing"
+      "receipt"
+      "ledger";
+    min-height: auto;
+  }
+
+  .upload-motion-scene::before {
+    display: none;
+  }
+
+  .motion-receipt,
+  .motion-processing,
+  .motion-ledger {
+    width: 100%;
+  }
+
+  .motion-ledger {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    padding: 0.85rem 1rem 0.15rem;
+  }
+
+  .topbar h1 {
+    max-width: 9ch;
+    font-size: clamp(1.45rem, 8vw, 2.1rem);
+  }
+
+  .topbar-text {
+    font-size: 0.9rem;
+  }
+
+  .upload-motion-scene {
+    padding: 0.9rem;
+  }
+}
