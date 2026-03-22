@@ -8,7 +8,7 @@
       name="description"
       content="ReceiptPulse is a polished personal receipt app that reads your bills, sorts spending automatically, and turns uploads into clean daily-use insights."
     />
-    <link rel="stylesheet" href="./styles.css?v=20260322k" />
+    <link rel="stylesheet" href="./styles.css?v=20260322l" />
   </head>
   <body>
     <div class="cursor-orb" id="cursorOrb" aria-hidden="true"></div>
@@ -405,9 +405,22 @@
       <div class="history-list" id="historyList"></div>
     </aside>
 
+    <div class="confirm-scrim" id="confirmScrim" hidden></div>
+    <section class="confirm-modal" id="confirmModal" aria-hidden="true" hidden role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <p class="eyebrow">Confirm action</p>
+      <h3 id="confirmTitle">Delete stored receipts?</h3>
+      <p class="confirm-copy" id="confirmBody">
+        This action will remove matching receipts from the archive, charts, totals, and review queue.
+      </p>
+      <div class="confirm-actions">
+        <button class="ghost-link ghost-button" id="confirmCancel" type="button">Cancel</button>
+        <button class="primary-button confirm-danger" id="confirmAccept" type="button">Delete</button>
+      </div>
+    </section>
+
     <div class="success-burst" id="successBurst" aria-hidden="true"></div>
 
-    <script src="./config.js?v=20260322k"></script>
-    <script src="./app.js?v=20260322k" defer></script>
+    <script src="./config.js?v=20260322l"></script>
+    <script src="./app.js?v=20260322l" defer></script>
   </body>
 </html>

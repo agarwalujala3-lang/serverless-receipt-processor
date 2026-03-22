@@ -420,6 +420,12 @@ const elements = {
   historyDrawer: document.querySelector("#historyDrawer"),
   historyList: document.querySelector("#historyList"),
   historyScrim: document.querySelector("#historyScrim"),
+  confirmModal: document.querySelector("#confirmModal"),
+  confirmScrim: document.querySelector("#confirmScrim"),
+  confirmTitle: document.querySelector("#confirmTitle"),
+  confirmBody: document.querySelector("#confirmBody"),
+  confirmAccept: document.querySelector("#confirmAccept"),
+  confirmCancel: document.querySelector("#confirmCancel"),
   successBurst: document.querySelector("#successBurst"),
 };
 
@@ -446,6 +452,10 @@ let uploadState = {
   fileName: "",
   startedAt: 0,
   durationMs: null,
+};
+let confirmState = {
+  resolve: null,
+  previousFocus: null,
 };
 
 function cloneDashboardState(source) {
@@ -2176,8 +2186,15 @@ function bindHistoryControls() {
   elements.historyDeleteAction?.addEventListener("click", clearStoredReceiptData);
   elements.historyClearLocal?.addEventListener("click", clearUploadHistory);
   elements.historyScrim?.addEventListener("click", closeHistoryDrawer);
+  elements.confirmAccept?.addEventListener("click", () => closeConfirmDialog(true));
+  elements.confirmCancel?.addEventListener("click", () => closeConfirmDialog(false));
+  elements.confirmScrim?.addEventListener("click", () => closeConfirmDialog(false));
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (!elements.confirmModal?.hidden) {
+        closeConfirmDialog(false);
+        return;
+      }
       closeHistoryDrawer();
     }
   });
@@ -2191,14 +2208,94 @@ function closeHistoryDrawer() {
   }
 }
 
-function clearUploadHistory() {
+function closeConfirmDialog(confirmed = false) {
+  const { confirmModal, confirmScrim } = elements;
+  if (!confirmModal || !confirmScrim) {
+    if (confirmState.resolve) {
+      const resolve = confirmState.resolve;
+      confirmState.resolve = null;
+      resolve(confirmed);
+    }
+    return;
+  }
+
+  confirmModal.classList.remove("is-open");
+  confirmScrim.classList.remove("is-open");
+  confirmModal.setAttribute("aria-hidden", "true");
+
+  const resolve = confirmState.resolve;
+  const previousFocus = confirmState.previousFocus;
+  confirmState.resolve = null;
+  confirmState.previousFocus = null;
+
+  window.setTimeout(() => {
+    confirmModal.hidden = true;
+    confirmScrim.hidden = true;
+  }, 180);
+
+  if (previousFocus?.focus) {
+    previousFocus.focus();
+  }
+
+  if (resolve) {
+    resolve(confirmed);
+  }
+}
+
+function openConfirmDialog({
+  title,
+  message,
+  confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
+} = {}) {
+  const {
+    confirmModal,
+    confirmScrim,
+    confirmTitle,
+    confirmBody,
+    confirmAccept,
+    confirmCancel,
+  } = elements;
+
+  if (!confirmModal || !confirmScrim || !confirmTitle || !confirmBody || !confirmAccept || !confirmCancel) {
+    return Promise.resolve(window.confirm(message || title || "Please confirm this action."));
+  }
+
+  if (confirmState.resolve) {
+    closeConfirmDialog(false);
+  }
+
+  confirmState.previousFocus = document.activeElement;
+  confirmTitle.textContent = title || "Confirm action";
+  confirmBody.textContent = message || "";
+  confirmAccept.textContent = confirmLabel;
+  confirmCancel.textContent = cancelLabel;
+  confirmModal.hidden = false;
+  confirmScrim.hidden = false;
+  confirmModal.setAttribute("aria-hidden", "false");
+
+  window.requestAnimationFrame(() => {
+    confirmModal.classList.add("is-open");
+    confirmScrim.classList.add("is-open");
+    confirmCancel.focus();
+  });
+
+  return new Promise((resolve) => {
+    confirmState.resolve = resolve;
+  });
+}
+
+async function clearUploadHistory() {
   if (!uploadHistory.length) {
     return;
   }
 
-  const shouldClear = window.confirm(
-    "Clear the browser-side upload history? This only removes local preview history from this browser."
-  );
+  const shouldClear = await openConfirmDialog({
+    title: "Clear local upload history?",
+    message:
+      "This only removes browser-side preview history from this device. Stored receipts in AWS stay unchanged.",
+    confirmLabel: "Clear local history",
+  });
   if (!shouldClear) {
     return;
   }
@@ -2222,9 +2319,12 @@ async function clearStoredReceiptData() {
   }
 
   const rangeLabel = buildRangeLabel(fromDate, toDate);
-  const shouldDelete = window.confirm(
-    `Delete stored receipts for ${rangeLabel}? This will remove matching receipts from the archive, charts, totals, and review queue.`
-  );
+  const shouldDelete = await openConfirmDialog({
+    title: `Delete stored receipts for ${rangeLabel}?`,
+    message:
+      "This will remove matching receipts from the archive, charts, totals, and review queue.",
+    confirmLabel: "Delete stored receipts",
+  });
   if (!shouldDelete) {
     return;
   }
